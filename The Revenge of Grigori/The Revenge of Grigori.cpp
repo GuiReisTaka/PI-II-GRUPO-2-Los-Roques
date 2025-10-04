@@ -13,6 +13,12 @@ typedef enum {
 	FASE_5
 } EstadoJogo;
 
+typedef struct {
+    float x, y; // Posição
+    float velocidade_x; // Velocidade e direção
+    bool ativa; // Se a magia está na tela ou não
+} Magia;
+
 // Variavel Global que guarda o background atual
 ALLEGRO_BITMAP* background_atual = NULL;
 
@@ -31,6 +37,12 @@ int main()
     ALLEGRO_TIMER* timer = NULL;
     ALLEGRO_BITMAP* jogador_imagem = NULL;
     ALLEGRO_BITMAP* mestre_imagem = NULL;
+    ALLEGRO_BITMAP* magia_imagem = NULL;
+
+   //variaveis das magias
+    const int maximo_de_magias = 5; 
+    Magia magias[maximo_de_magias];
+    float velocidade_magia = 10.0;
 
     // Variável que controla a fase atual do jogo
     EstadoJogo estado_atual = FASE_1;
@@ -40,6 +52,7 @@ int main()
     al_init_primitives_addon();
     al_init_image_addon();
     al_install_keyboard();
+    al_install_mouse();
 
     // Criação da janela, timer e fila de eventos
     timer = al_create_timer(1.0 / 60.0);
@@ -49,15 +62,22 @@ int main()
     // Carrega as imagens de personagem
     jogador_imagem = al_load_bitmap("imagens/p1.png");
     mestre_imagem = al_load_bitmap("imagens/Mestre1.png");
-    if (!jogador_imagem || !mestre_imagem) {
+    magia_imagem = al_load_bitmap("imagens/Fogo.png"); 
+    if (!jogador_imagem || !mestre_imagem || !magia_imagem) { 
         printf("Erro ao carregar imagens permanentes!\n");
         return -1;
+    }
+
+    // Inicia todas as magias 
+    for (int i = 0; i < maximo_de_magias; i++) {
+        magias[i].ativa = false;
     }
 
     //Registra as informaçoes de eventos para a fila de eventos
     al_register_event_source(fila_eventos, al_get_display_event_source(janela));
     al_register_event_source(fila_eventos, al_get_keyboard_event_source());
     al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
+    al_register_event_source(fila_eventos, al_get_mouse_event_source());
 
     // PosiçãoY do chão
     float chao_y = 990;
@@ -100,7 +120,7 @@ int main()
 
         if (evento.type == ALLEGRO_EVENT_TIMER) {
 
-            // Lógica de movimento do jogador (funciona em qualquer fase)
+            // Movimento do jogador 
             if (tecla_a) { jogador_x -= velocidade_horizontal; }
             if (tecla_d) { jogador_x += velocidade_horizontal; }
 
@@ -111,6 +131,19 @@ int main()
                 jogador_y = chao_y - jogador_altura;
                 jogador_velocidade_y = 0;
                 no_chao = true;
+            }
+
+			// Disparo de magias 
+            for (int i = 0; i < maximo_de_magias; i++) {
+                if (magias[i].ativa == true) {
+                    // Move a magia
+                    magias[i].x = magias[i].x + magias[i].velocidade_x;
+
+                    // Se a magia sair da tela, ela se torna inativa
+                    if (magias[i].x > 1536 || magias[i].x < 0) {
+                        magias[i].ativa = false;
+                    }
+                }
             }
 
             // Mudança de fase
@@ -142,13 +175,38 @@ int main()
             }
         }
 
+        else if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+            // Só atira se estiver na Fase 2
+            if (estado_atual == FASE_2) {
+                // Procura por uma magia "inativa" para poder atirar
+                for (int i = 0; i < maximo_de_magias; i++) {
+                    if (magias[i].ativa == false) {
+                        magias[i].ativa = true;
+                        magias[i].y = jogador_y + jogador_altura / 2; // Magia sai do meio do jogador
+
+                        // Define a posição e direção da magia
+                        if (virado_para_direita) {
+                            magias[i].x = jogador_x + jogador_largura;
+                            magias[i].velocidade_x = velocidade_magia;
+                        }
+                        else {
+                            magias[i].x = jogador_x;
+                            magias[i].velocidade_x = -velocidade_magia;
+                        }
+
+                        break; // Sai do 'for' para atirar apenas uma magia por clique
+                    }
+                }
+            }
+        }
+
         if (redesenhar) {
             redesenhar = false;
 
             // Desenha o fundo da fase em que está
             al_draw_bitmap(background_atual, 0, 0, 0);
 
-            // Desenha o mestre na Fase 1 
+            // Desenha o mestre na Fase 1 dd
             if (estado_atual == FASE_1) {
                 al_draw_bitmap(mestre_imagem, mestre_x, mestre_y, 0);
             }
@@ -161,9 +219,26 @@ int main()
                 al_draw_bitmap(jogador_imagem, jogador_x, jogador_y, 0);
             }
 
+            for (int i = 0; i < maximo_de_magias; i++) {
+                if (magias[i].ativa == true) {
+
+                    // Verifica a direção da magia pela sua velocidade
+                    if (magias[i].velocidade_x > 0) {
+                        // Velocidade positiva = indo para a direita. Desenha normal.
+                        al_draw_bitmap(magia_imagem, magias[i].x, magias[i].y, 0);
+                    }
+                    else {
+                        // Velocidade negativa = indo para a esquerda. Desenha espelhado.
+                        al_draw_bitmap(magia_imagem, magias[i].x, magias[i].y, ALLEGRO_FLIP_HORIZONTAL);
+                    }
+
+                }
+            }
+
             al_flip_display();
         }
     }
+
 
     // Descarrega os recursos da última fase que estava ativa 
     if (estado_atual == FASE_1) {
@@ -176,6 +251,7 @@ int main()
     // Destroi os recursos "permanentes"
     al_destroy_bitmap(jogador_imagem);
     al_destroy_bitmap(mestre_imagem);
+    al_destroy_bitmap(magia_imagem);
     al_destroy_timer(timer);
     al_destroy_event_queue(fila_eventos);
     al_destroy_display(janela);
