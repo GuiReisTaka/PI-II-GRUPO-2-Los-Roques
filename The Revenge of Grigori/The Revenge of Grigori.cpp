@@ -4,34 +4,45 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
 
-// Define as fases do jogo
+// --- Define os estados do jogo ---
 typedef enum {
+    MENU,
+    INSTRUCOES,
     FASE_1,
-    FASE_2,
-    FASE_3,
-    FASE_4,
-	FASE_5
+    FASE_2
 } EstadoJogo;
 
+// --- Estrutura da Magia ---
 typedef struct {
-    float x, y; // Posição
-    float velocidade_x; // Velocidade e direção
-    bool ativa; // Se a magia está na tela ou não
+    float x, y;
+    float velocidade_x;
+    bool ativa;
 } Magia;
 
-// Variavel Global que guarda o background atual
+#define MAXIMO_DE_MAGIAS 10
+#define VELOCIDADE_MAGIA 12.0f
+
+// --- Variável Global para o fundo atual ---
 ALLEGRO_BITMAP* background_atual = NULL;
 
-// Declaração das funções
-void carregar_fase_1(float* jogador_x_ptr);
+// --- Declaração das Funções ---
+void carregar_menu();
+void descarregar_menu();
+void carregar_instrucoes();
+void descarregar_instrucoes();
+void carregar_fase_1(float* jogador_x_ptr, bool* virado_dir_ptr);
 void descarregar_fase_1();
-void carregar_fase_2(float* jogador_x_ptr);
+void carregar_fase_2(float* jogador_x_ptr, bool* virado_dir_ptr);
 void descarregar_fase_2();
 
+// --- Função para checar clique no botão ---
+bool mouse_dentro_da_area(float mouse_x, float mouse_y, float x1, float y1, float x2, float y2) {
+    return (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2);
+}
 
 int main()
 {
-    //variaveis de representação
+    // --- Variáveis de representação ---
     ALLEGRO_DISPLAY* janela = NULL;
     ALLEGRO_EVENT_QUEUE* fila_eventos = NULL;
     ALLEGRO_TIMER* timer = NULL;
@@ -39,256 +50,234 @@ int main()
     ALLEGRO_BITMAP* mestre_imagem = NULL;
     ALLEGRO_BITMAP* magia_imagem = NULL;
 
-   //variaveis das magias
-    const int maximo_de_magias = 5; 
-    Magia magias[maximo_de_magias];
-    float velocidade_magia = 10.0;
+    Magia magias[MAXIMO_DE_MAGIAS];
 
-    // Variável que controla a fase atual do jogo
-    EstadoJogo estado_atual = FASE_1;
+    // --- O jogo começa no estado MENU ---
+    EstadoJogo estado_atual = MENU;
 
-    // Inicialização do Allegro e dos addons
+    // --- Inicialização do Allegro ---
     al_init();
     al_init_primitives_addon();
     al_init_image_addon();
     al_install_keyboard();
     al_install_mouse();
 
-    // Criação da janela, timer e fila de eventos
+    // --- Criação da Janela, Timer e Fila de Eventos ---
     timer = al_create_timer(1.0 / 60.0);
     janela = al_create_display(1536, 1024);
     fila_eventos = al_create_event_queue();
 
-    // Carrega as imagens de personagem
+    // --- Carrega imagens permanentes ---
     jogador_imagem = al_load_bitmap("imagens/p1.png");
     mestre_imagem = al_load_bitmap("imagens/Mestre1.png");
-    magia_imagem = al_load_bitmap("imagens/Fogo.png"); 
-    if (!jogador_imagem || !mestre_imagem || !magia_imagem) { 
+    magia_imagem = al_load_bitmap("imagens/fogo.png");
+    if (!jogador_imagem || !mestre_imagem || !magia_imagem) {
         printf("Erro ao carregar imagens permanentes!\n");
         return -1;
     }
 
-    // Inicia todas as magias 
-    for (int i = 0; i < maximo_de_magias; i++) {
+    // Inicializa magias como inativas
+    for (int i = 0; i < MAXIMO_DE_MAGIAS; i++) {
         magias[i].ativa = false;
     }
 
-    //Registra as informaçoes de eventos para a fila de eventos
+    // --- Registra fontes de eventos ---
     al_register_event_source(fila_eventos, al_get_display_event_source(janela));
     al_register_event_source(fila_eventos, al_get_keyboard_event_source());
     al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
     al_register_event_source(fila_eventos, al_get_mouse_event_source());
 
-    // PosiçãoY do chão
-    float chao_y = 990;
+    // --- COORDENADAS DOS BOTÕES (LEIA O AVISO NO TOPO!) ---
+    float botao_iniciar_x1 = 618, botao_iniciar_y1 = 400, botao_iniciar_x2 = 918, botao_iniciar_y2 = 480;
+    float botao_instrucoes_x1 = 618, botao_instrucoes_y1 = 520, botao_instrucoes_x2 = 918, botao_instrucoes_y2 = 600;
+    float botao_voltar_x1 = 618, botao_voltar_y1 = 800, botao_voltar_x2 = 918, botao_voltar_y2 = 880;
 
-    // Variaveis do jogador
+    // --- Variáveis do Jogo ---
+    float chao_y = 990;
     float jogador_largura = al_get_bitmap_width(jogador_imagem);
     float jogador_altura = al_get_bitmap_height(jogador_imagem);
-    float jogador_x = 0; 
-    float jogador_y = chao_y - jogador_altura;
-    float velocidade_horizontal = 5.0;
-
-    // Variaveis do mestre (posição é sempre a mesma na fase 1)
-    float mestre_x = 100;
-    float mestre_y = chao_y - al_get_bitmap_height(mestre_imagem);
-
-    // Variaveis do pulo
+    float jogador_x = 0, jogador_y = 0; // Posições serão definidas no load de cada fase
     float jogador_velocidade_y = 0;
+    float velocidade_horizontal = 5.0;
     float gravidade = 0.5;
     float forca_pulo = 10.0;
     bool no_chao = false;
-
-    // Variáveis para verificar as teclas pressionadas
-    bool tecla_a = false;
-    bool tecla_d = false;
+    bool tecla_a = false, tecla_d = false;
     bool virado_para_direita = false;
 
+    // --- Carrega o estado inicial (Menu) ---
+    carregar_menu();
+
+    al_start_timer(timer);
     bool sair = false;
     bool redesenhar = true;
 
-    //Carrega a Fase 1 antes do loop principal começar
-    carregar_fase_1(&jogador_x);
-
-    al_start_timer(timer);
-
-    //Inicio do loop do jogo
     while (!sair)
     {
         ALLEGRO_EVENT evento;
         al_wait_for_event(fila_eventos, &evento);
 
         if (evento.type == ALLEGRO_EVENT_TIMER) {
+            // A lógica de física e movimento só roda durante as fases
+            if (estado_atual == FASE_1 || estado_atual == FASE_2) {
+                // Movimento Horizontal
+                if (tecla_a) { jogador_x -= velocidade_horizontal; }
+                if (tecla_d) { jogador_x += velocidade_horizontal; }
 
-            // Movimento do jogador 
-            if (tecla_a) { jogador_x -= velocidade_horizontal; }
-            if (tecla_d) { jogador_x += velocidade_horizontal; }
+                // Gravidade e Pulo
+                jogador_velocidade_y += gravidade;
+                jogador_y += jogador_velocidade_y;
+                no_chao = false;
+                if (jogador_y + jogador_altura >= chao_y) {
+                    jogador_y = chao_y - jogador_altura;
+                    jogador_velocidade_y = 0;
+                    no_chao = true;
+                }
 
-            jogador_velocidade_y += gravidade;
-            jogador_y += jogador_velocidade_y;
-            no_chao = false;
-            if (jogador_y + jogador_altura >= chao_y) {
-                jogador_y = chao_y - jogador_altura;
-                jogador_velocidade_y = 0;
-                no_chao = true;
-            }
-
-			// Disparo de magias 
-            for (int i = 0; i < maximo_de_magias; i++) {
-                if (magias[i].ativa == true) {
-                    // Move a magia
-                    magias[i].x = magias[i].x + magias[i].velocidade_x;
-
-                    // Se a magia sair da tela, ela se torna inativa
-                    if (magias[i].x > 1536 || magias[i].x < 0) {
-                        magias[i].ativa = false;
+                // Movimento das magias (só na fase 2, mas a verificação já está no clique)
+                for (int i = 0; i < MAXIMO_DE_MAGIAS; i++) {
+                    if (magias[i].ativa) {
+                        magias[i].x += magias[i].velocidade_x;
+                        if (magias[i].x < 0 || magias[i].x > 1536) {
+                            magias[i].ativa = false;
+                        }
                     }
                 }
-            }
 
-            // Mudança de fase
-            if (estado_atual == FASE_1) {
-				// Quando o jogador ultrapassa o limite direito da Fase 1, muda para a Fase 2
-                if (jogador_x > 1536) {
-                    descarregar_fase_1();       
-                    estado_atual = FASE_2;          
-                    carregar_fase_2(&jogador_x);    
+                // Gatilho de mudança de fase
+                if (estado_atual == FASE_1 && jogador_x > 1536) {
+                    descarregar_fase_1();
+                    estado_atual = FASE_2;
+                    carregar_fase_2(&jogador_x, &virado_para_direita);
                 }
             }
-            // (Aqui poderíamos adicionar a lógica de transição da Fase 2 para a próxima)
-
             redesenhar = true;
         }
         else if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) { sair = true; }
         else if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
-            switch (evento.keyboard.keycode) {
-            case ALLEGRO_KEY_A: tecla_a = true; virado_para_direita = false; break;
-            case ALLEGRO_KEY_D: tecla_d = true; virado_para_direita = true; break;
-            case ALLEGRO_KEY_W: if (no_chao) { jogador_velocidade_y = -forca_pulo; } break;
+            // Teclado só funciona durante as fases
+            if (estado_atual == FASE_1 || estado_atual == FASE_2) {
+                switch (evento.keyboard.keycode) {
+                case ALLEGRO_KEY_A: tecla_a = true; virado_para_direita = false; break;
+                case ALLEGRO_KEY_D: tecla_d = true; virado_para_direita = true; break;
+                case ALLEGRO_KEY_W: if (no_chao) { jogador_velocidade_y = -forca_pulo; } break;
+                }
             }
+            // ESC para sair de qualquer tela
+            if (evento.keyboard.keycode == ALLEGRO_KEY_ESCAPE) { sair = true; }
         }
         else if (evento.type == ALLEGRO_EVENT_KEY_UP) {
             switch (evento.keyboard.keycode) {
             case ALLEGRO_KEY_A: tecla_a = false; break;
             case ALLEGRO_KEY_D: tecla_d = false; break;
-            case ALLEGRO_KEY_ESCAPE: sair = true; break;
             }
         }
-
         else if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
-            // Só atira se estiver na Fase 2
-            if (estado_atual == FASE_2) {
-                // Procura por uma magia "inativa" para poder atirar
-                for (int i = 0; i < maximo_de_magias; i++) {
-                    if (magias[i].ativa == false) {
+            switch (estado_atual) {
+            case MENU:
+                if (mouse_dentro_da_area(evento.mouse.x, evento.mouse.y, botao_iniciar_x1, botao_iniciar_y1, botao_iniciar_x2, botao_iniciar_y2)) {
+                    descarregar_menu();
+                    estado_atual = FASE_1;
+                    carregar_fase_1(&jogador_x, &virado_para_direita);
+                }
+                else if (mouse_dentro_da_area(evento.mouse.x, evento.mouse.y, botao_instrucoes_x1, botao_instrucoes_y1, botao_instrucoes_x2, botao_instrucoes_y2)) {
+                    descarregar_menu();
+                    estado_atual = INSTRUCOES;
+                    carregar_instrucoes();
+                }
+                break;
+            case INSTRUCOES:
+                if (mouse_dentro_da_area(evento.mouse.x, evento.mouse.y, botao_voltar_x1, botao_voltar_y1, botao_voltar_x2, botao_voltar_y2)) {
+                    descarregar_instrucoes();
+                    estado_atual = MENU;
+                    carregar_menu();
+                }
+                break;
+            case FASE_2:
+                for (int i = 0; i < MAXIMO_DE_MAGIAS; i++) {
+                    if (!magias[i].ativa) {
                         magias[i].ativa = true;
-                        magias[i].y = jogador_y + jogador_altura / 2; // Magia sai do meio do jogador
-
-                        // Define a posição e direção da magia
+                        magias[i].y = jogador_y + jogador_altura / 2;
                         if (virado_para_direita) {
                             magias[i].x = jogador_x + jogador_largura;
-                            magias[i].velocidade_x = velocidade_magia;
+                            magias[i].velocidade_x = VELOCIDADE_MAGIA;
                         }
                         else {
                             magias[i].x = jogador_x;
-                            magias[i].velocidade_x = -velocidade_magia;
+                            magias[i].velocidade_x = -VELOCIDADE_MAGIA;
                         }
-
-                        break; // Sai do 'for' para atirar apenas uma magia por clique
+                        break;
                     }
                 }
+                break;
             }
         }
 
-        if (redesenhar) {
+        if (redesenhar && al_is_event_queue_empty(fila_eventos)) {
             redesenhar = false;
+            switch (estado_atual) {
+            case MENU:
+                al_draw_bitmap(background_atual, 0, 0, 0);
+                break;
+            case INSTRUCOES:
+                al_draw_bitmap(background_atual, 0, 0, 0);
+                al_draw_filled_rectangle(botao_voltar_x1, botao_voltar_y1, botao_voltar_x2, botao_voltar_y2, al_map_rgb(200, 0, 0)); // Botão de teste
+                break;
+            case FASE_1:
+            case FASE_2:
+                al_draw_bitmap(background_atual, 0, 0, 0);
+                if (estado_atual == FASE_1) al_draw_bitmap(mestre_imagem, 100, chao_y - al_get_bitmap_height(mestre_imagem), 0);
 
-            // Desenha o fundo da fase em que está
-            al_draw_bitmap(background_atual, 0, 0, 0);
+                int flags = virado_para_direita ? 0 : ALLEGRO_FLIP_HORIZONTAL;
+                al_draw_bitmap(jogador_imagem, jogador_x, jogador_y, flags);
 
-            // Desenha o mestre na Fase 1 dd
-            if (estado_atual == FASE_1) {
-                al_draw_bitmap(mestre_imagem, mestre_x, mestre_y, 0);
-            }
-
-            // Desenha o jogador 
-            if (virado_para_direita) {
-                al_draw_bitmap(jogador_imagem, jogador_x, jogador_y, ALLEGRO_FLIP_HORIZONTAL);
-            }
-            else {
-                al_draw_bitmap(jogador_imagem, jogador_x, jogador_y, 0);
-            }
-
-            for (int i = 0; i < maximo_de_magias; i++) {
-                if (magias[i].ativa == true) {
-
-                    // Verifica a direção da magia pela sua velocidade
-                    if (magias[i].velocidade_x > 0) {
-                        // Velocidade positiva = indo para a direita. Desenha normal.
-                        al_draw_bitmap(magia_imagem, magias[i].x, magias[i].y, 0);
-                    }
-                    else {
-                        // Velocidade negativa = indo para a esquerda. Desenha espelhado.
-                        al_draw_bitmap(magia_imagem, magias[i].x, magias[i].y, ALLEGRO_FLIP_HORIZONTAL);
-                    }
-
+                for (int i = 0; i < MAXIMO_DE_MAGIAS; i++) {
+                    if (magias[i].ativa) al_draw_bitmap(magia_imagem, magias[i].x, magias[i].y, 0);
                 }
+                break;
             }
-
             al_flip_display();
         }
     }
 
-
-    // Descarrega os recursos da última fase que estava ativa 
-    if (estado_atual == FASE_1) {
-        descarregar_fase_1();
-    }
-    else if (estado_atual == FASE_2) {
-        descarregar_fase_2();
-    }
-
-    // Destroi os recursos "permanentes"
+    // --- Finalização ---
+    if (background_atual) al_destroy_bitmap(background_atual);
     al_destroy_bitmap(jogador_imagem);
     al_destroy_bitmap(mestre_imagem);
     al_destroy_bitmap(magia_imagem);
     al_destroy_timer(timer);
     al_destroy_event_queue(fila_eventos);
     al_destroy_display(janela);
-    al_shutdown_primitives_addon();
 
     return 0;
 }
 
+// --- Implementação das Funções de Fase ---
 
-void carregar_fase_1(float* jogador_x_ptr) {
-    printf("Carregando recursos da Fase 1...\n");
+void carregar_menu() {
+    background_atual = al_load_bitmap("Imagens/menu.png");
+    if (!background_atual) { printf("Erro ao carregar menu.png!\n"); exit(-1); }
+}
+void descarregar_menu() { al_destroy_bitmap(background_atual); background_atual = NULL; }
+
+void carregar_instrucoes() {
+    background_atual = al_load_bitmap("Imagens/instrucoes.png");
+    if (!background_atual) { printf("Erro ao carregar instrucoes.png!\n"); exit(-1); }
+}
+void descarregar_instrucoes() { al_destroy_bitmap(background_atual); background_atual = NULL; }
+
+void carregar_fase_1(float* jogador_x_ptr, bool* virado_dir_ptr) {
     background_atual = al_load_bitmap("Imagens/Tela_inicial.png");
-    if (!background_atual) {
-        printf("Erro ao carregar fundo da fase 1!\n");
-        exit(-1); 
-    }
-    // Posição inicial do jogador na Fase 1 
+    if (!background_atual) { printf("Erro ao carregar fundo da fase 1!\n"); exit(-1); }
     *jogador_x_ptr = 1150;
+    *virado_dir_ptr = false; // Começa virado para a esquerda, para o mestre
 }
+void descarregar_fase_1() { al_destroy_bitmap(background_atual); background_atual = NULL; }
 
-void descarregar_fase_1() {
-    printf("Descarregando recursos da Fase 1...\n");
-    al_destroy_bitmap(background_atual);
-}
-
-void carregar_fase_2(float* jogador_x_ptr) {
-    printf("Carregando recursos da Fase 2...\n");
+void carregar_fase_2(float* jogador_x_ptr, bool* virado_dir_ptr) {
     background_atual = al_load_bitmap("Imagens/Tela 2.png");
-    if (!background_atual) {
-        printf("Erro ao carregar fundo da fase 2!\n");
-        exit(-1);
-    }
-    // Posição inicial do jogador na Fase 2 (no canto esquerdo)
+    if (!background_atual) { printf("Erro ao carregar fundo da fase 2!\n"); exit(-1); }
     *jogador_x_ptr = 50.0f;
+    *virado_dir_ptr = true; // Começa virado para a direita
 }
-
-void descarregar_fase_2() {
-    printf("Descarregando recursos da Fase 2...\n");
-    al_destroy_bitmap(background_atual);
-}
+void descarregar_fase_2() { al_destroy_bitmap(background_atual); background_atual = NULL; }
