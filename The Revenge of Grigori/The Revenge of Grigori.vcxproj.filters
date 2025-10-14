@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="The Revenge of Grigori.cpp">
+    <ClCompile Include="The Revenge of Grigori.c">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
   </ItemGroup>
