@@ -19,8 +19,8 @@ typedef enum {
     ESCOLHA,
     FINAL_1,
 	FINAL_2,
-    TELA_OBRIGADO
-
+    TELA_OBRIGADO,
+    TELA_GAMEOVER
 } EstadoJogo;
 
 // --- Estrutura da Magia ---
@@ -70,6 +70,10 @@ ALLEGRO_BITMAP* sprite_titan_lava = NULL;
 #define MAX_MAGIAS_raio 3
 #define VELOCIDADE_raio 15.0f 
 
+//Define a altura e a largura da tela
+#define LARGURA_JOGO 1536
+#define ALTURA_JOGO 1024
+
 // --- Variável Global para o fundo atual ---
 ALLEGRO_BITMAP* background_atual = NULL;
 
@@ -107,6 +111,9 @@ void carregar_final_2();
 void descarregar_final_2();
 void carregar_tela_obrigado();
 void descarregar_tela_obrigado();
+
+void carregar_gameover();
+void descarregar_gameover();
 
 void limpar_inimigos(Inimigo array_inimigos[]);
 
@@ -157,7 +164,8 @@ int main()
 
     // --- Criação da Janela, Timer e Fila de Eventos ---
     timer = al_create_timer(1.0 / 60.0);
-    janela = al_create_display(1536, 1024);
+    al_set_new_display_flags(ALLEGRO_RESIZABLE);
+    janela = al_create_display(LARGURA_JOGO, ALTURA_JOGO);
     fila_eventos = al_create_event_queue();
 
     // --- Carrega imagens permanentes ---
@@ -206,6 +214,7 @@ int main()
     al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
     al_register_event_source(fila_eventos, al_get_mouse_event_source());
 
+
 	// botões do menu
     float botao_iniciar_x1 = 580, botao_iniciar_y1 = 790, botao_iniciar_x2 = 925, botao_iniciar_y2 = 860;
     float botao_instrucoes_x1 = 520, botao_instrucoes_y1 = 820, botao_instrucoes_x2 = 1014, botao_instrucoes_y2 = 950;
@@ -220,6 +229,9 @@ int main()
 
 	// Botão da tela de obrigado
     float botao_para_obrigado_x1 = 592, botao_para_obrigado_y1 = 810, botao_para_obrigado_x2 = 950, botao_para_obrigado_y2 = 933;
+
+    // Botão da tela de gameover
+    float botao_reiniciar_x1 = 520, botao_reiniciar_y1 = 630, botao_reiniciar_x2 = 995, botao_reiniciar_y2 = 755;
 
     // --- Variáveis do Jogo ---
     float chao_y = 990;
@@ -328,6 +340,13 @@ int main()
                             inimigos[i].ativo = false; // Faz o inimigo desaparecer para não dar dano contínuo
 
                             printf("JOGADOR ATINGIDO! Vidas restantes: %d\n", vida_jogador);
+
+                            if (vida_jogador <= 0) {
+                                printf("GAME OVER!\n");
+                                estado_atual = TELA_GAMEOVER;
+                                carregar_gameover();
+                                limpar_inimigos(inimigos); // Limpa todos os inimigos restantes
+                            }
                         }
                     }
                 }
@@ -365,6 +384,8 @@ int main()
             redesenhar = true;
         }
         else if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) { sair = true; }
+        
+
         else if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
             // Teclado só funciona durante as fases
             if ((estado_atual >= FASE_1 && estado_atual <= FASE_4) || estado_atual == FINAL_1) {
@@ -393,6 +414,15 @@ int main()
             }
         }
         else if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+
+            ALLEGRO_TRANSFORM transform_atual;
+            al_copy_transform(&transform_atual, al_get_current_transform());
+            al_invert_transform(&transform_atual);
+
+            float mouseX_transformado = evento.mouse.x;
+            float mouseY_transformado = evento.mouse.y;
+            al_transform_coordinates(&transform_atual, &mouseX_transformado, &mouseY_transformado);
+
             switch (estado_atual) {
             case MENU:
                 if (mouse_dentro_da_area(evento.mouse.x, evento.mouse.y, botao_iniciar_x1, botao_iniciar_y1, botao_iniciar_x2, botao_iniciar_y2)) {
@@ -476,6 +506,17 @@ int main()
                 descarregar_tela_obrigado();
                 estado_atual = MENU;
                 carregar_menu();
+                break;
+
+            case TELA_GAMEOVER:
+                if (mouse_dentro_da_area(mouseX_transformado, mouseY_transformado, botao_reiniciar_x1, botao_reiniciar_y1, botao_reiniciar_x2, botao_reiniciar_y2)) {
+                    descarregar_gameover();
+                    estado_atual = MENU;
+                    carregar_menu();
+
+                    //Reseta a vida do jogador 
+                    vida_jogador = 3;
+                }
                 break;
 
 
@@ -642,6 +683,12 @@ int main()
             case FASE_4:
                 al_draw_bitmap(background_atual, 0, 0, 0);
 				
+                break;
+
+            case TELA_GAMEOVER:
+                al_draw_bitmap(background_atual, 0, 0, 0);
+                // Opcional: desenhe um retângulo para ver o botão de reiniciar
+                // al_draw_rectangle(botao_reiniciar_x1, botao_reiniciar_y1, botao_reiniciar_x2, botao_reiniciar_y2, al_map_rgb(255, 255, 0), 2);
                 break;
             }
             
@@ -956,6 +1003,15 @@ void limpar_inimigos(Inimigo array_inimigos[]) {
     for (int i = 0; i < MAX_INIMIGOS; i++) {
         array_inimigos[i].ativo = false;
     }
+}
+
+void carregar_gameover() {
+    background_atual = al_load_bitmap("imagens/gameover.png");
+    if (!background_atual) { printf("Erro ao carregar a tela de Game Over!\n"); exit(-1); }
+}
+void descarregar_gameover() {
+    if (background_atual) al_destroy_bitmap(background_atual);
+    background_atual = NULL;
 }
 
 bool checa_colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
