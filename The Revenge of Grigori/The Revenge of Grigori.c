@@ -57,7 +57,9 @@ typedef struct {
     float hitbox_largura;
     float hitbox_altura;
     float largura_desenho;      
-    float altura_desenho;       
+    float altura_desenho;  
+
+    int vida;
 
     bool ativo; // Diz de o inimigo está na tela, "vivo"            
 } Inimigo;
@@ -66,14 +68,23 @@ typedef struct {
 
 #define TEMPO_INVENCIBILIDADE (60 * 2)
 
-//Inimigos da fase da floresta
-#define FREQUENCIA_SPAWN_SLIME (60 * 0.5) // 2 segundos
+// Inimigos da fase da floresta
+#define FREQUENCIA_SPAWN_SLIME (60 * 1) // 2 segundos
 #define TEMPO_SPAWN_CHEFE (60 * 20)      // 20 segundos
 #define TOTAL_SLIMES_FASE_2 25
 
 int timer_spawn_slime = 0;  // Contador para o próximo slime normal
 int slimes_spawnados = 0;   // Quantos slimes já apareceram
 int timer_fase_2 = 0;
+
+// Inimigos da fase da montanha
+#define FREQUENCIA_SPAWN_GOLEM (60 * 0.8) // 0.8 segundos
+#define TEMPO_SPAWN_CYCLOPE (60 * 13)   // 15 segundos
+#define TOTAL_GOLEMS_FASE_3 19
+
+int timer_spawn_golem = 0;
+int golems_spawnados = 0;
+int timer_fase_3 = 0;
 
 Inimigo inimigos[MAX_INIMIGOS];
 ALLEGRO_BITMAP* sprite_slime_normal = NULL;
@@ -150,7 +161,8 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP* sprite,
     float vel_x, float forca_pulo, int freq_pulo,
     float p_inicio, float p_fim,
     float escala,
-    float h_offset_x, float h_offset_y, float h_ajuste_w, float h_ajuste_h);
+    float h_offset_x, float h_offset_y, float h_ajuste_w, float h_ajuste_h,
+    int vida_inicial);
 
 bool checa_colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
@@ -354,7 +366,7 @@ int main()
                             0, 9.0f, 150,
                             0, 0,
                             1.5f,
-                            15, 140, 30, 180);
+                            15, 140, 30, 180, 15);
                     }
 
                     // Spawna os Slimes Normais 
@@ -371,7 +383,7 @@ int main()
                                 0, 15.0f, 65,
                                 0, 0,
                                 1.0f,
-                                5, 80, 10, 85);
+                                5, 80, 10, 85, 3);
 
                             slimes_spawnados++; // Incrementa a contagem
                             timer_spawn_slime = FREQUENCIA_SPAWN_SLIME; // Reseta o timer para o próximo
@@ -414,21 +426,70 @@ int main()
                     break;
 
                 case FASE_3:
+
+                    timer_fase_3++; // Incrementa o timer principal da fase 3
+
+                    // Spawna o Cyclope
+                    if (timer_fase_3 == TEMPO_SPAWN_CYCLOPE) {
+                        printf("CHEFE CYCLOPE SPAWNOU!\n");
+                        // Spawna o Cyclope de Gelo (usando seus valores de patrulha e hitbox)
+                        spawn_inimigo(inimigos, sprite_ice_cyclop,
+                            1200, 450.0f, 0, true,
+                            -1.5f, 0, 0,
+                            0, 1536,
+                            1.0f,
+                            95, 5, 150, 30, 16);
+                    }
+
+                    // Spawna os Golems 
+                    if (golems_spawnados < TOTAL_GOLEMS_FASE_3) {
+                        timer_spawn_golem--;
+                        if (timer_spawn_golem <= 0) {
+                            printf("Golem de Gelo #%d spawnou!\n", golems_spawnados + 1);
+
+                            float spawn_x = 400 + (rand() % 800); // Spawna em área aleatória
+
+                            spawn_inimigo(inimigos, sprite_golem_gelo,
+                                spawn_x, 100.0f, 0, true,
+                                -1.0f, 0, 0,
+                                0, 1536,
+                                1.0f,
+                                5, 100, 10, 105, 1);
+
+                            golems_spawnados++;
+                            timer_spawn_golem = FREQUENCIA_SPAWN_GOLEM; // Reseta o timer
+                        }
+                    }
+
                     for (int i = 0; i < MAX_INIMIGOS; i++) {
                         if (inimigos[i].ativo) {
-                            // 1. Aplica o movimento horizontal
-                            inimigos[i].x += inimigos[i].velocidade_x;
+                            // Aplica gravidade 
+                            inimigos[i].y_velocidade += gravidade;
+                            inimigos[i].y += inimigos[i].y_velocidade;
 
-                            // 2. Verifica se atingiu os limites da patrulha
-                            if (inimigos[i].x < inimigos[i].patrol_x_inicio) {
-                                inimigos[i].x = inimigos[i].patrol_x_inicio; 
-                                inimigos[i].velocidade_x *= -1; 
-                                inimigos[i].virado_para_direita = true; 
+                            // Checa colisão com o chão 
+                            if (inimigos[i].y + inimigos[i].altura_desenho >= chao_y) {
+                                inimigos[i].y = chao_y - inimigos[i].altura_desenho;
+                                inimigos[i].y_velocidade = 0;
+                                inimigos[i].no_chao = true;
                             }
-                            else if (inimigos[i].x + inimigos[i].largura_desenho > inimigos[i].patrol_x_fim) {
-                                inimigos[i].x = inimigos[i].patrol_x_fim - inimigos[i].largura_desenho; 
-                                inimigos[i].velocidade_x *= -1; 
-                                inimigos[i].virado_para_direita = false; 
+
+                            // Lógica de Patrulha 
+                            if (inimigos[i].no_chao) {
+                                // Aplica o movimento horizontal
+                                inimigos[i].x += inimigos[i].velocidade_x;
+
+                                // Verifica se atingiu os limites da patrulha e inverte
+                                if (inimigos[i].x <= inimigos[i].patrol_x_inicio) {
+                                    inimigos[i].x = inimigos[i].patrol_x_inicio;
+                                    inimigos[i].velocidade_x *= -1;
+                                    inimigos[i].virado_para_direita = true;
+                                }
+                                else if (inimigos[i].x + inimigos[i].largura_desenho >= inimigos[i].patrol_x_fim) {
+                                    inimigos[i].x = inimigos[i].patrol_x_fim - inimigos[i].largura_desenho;
+                                    inimigos[i].velocidade_x *= -1;
+                                    inimigos[i].virado_para_direita = false;
+                                }
                             }
                         }
                     }
@@ -459,11 +520,23 @@ int main()
                                 if (checa_colisao(magia_hitbox_x, magia_hitbox_y, magias[i].largura, magias[i].altura,
                                     inimigo_hitbox_x, inimigo_hitbox_y, inimigos[j].hitbox_largura, inimigos[j].hitbox_altura))
                                 {
-
                                     magias[i].ativa = false;
-                                    inimigos[j].ativo = false;
 
-                                    printf("COLISAO! Magia atingiu um inimigo.\n");
+                                    // 2. O inimigo toma 1 de dano
+                                    inimigos[j].vida--;
+
+                                    // 3. Dá um leve "knockback" no inimigo para feedback
+                                    inimigos[j].y_velocidade = -2.0f;
+                                    inimigos[j].no_chao = false;
+
+                                    // 4. Checa se o inimigo morreu
+                                    if (inimigos[j].vida <= 0) {
+                                        inimigos[j].ativo = false; // Agora sim ele morre
+                                        printf("INIMIGO DERROTADO!\n");
+                                    }
+                                    else {
+                                        printf("Inimigo atingido! Vida restante: %d\n", inimigos[j].vida);
+                                    }
                                 }
                             }
                         }
@@ -479,11 +552,13 @@ int main()
                         float inimigo_hitbox_x_real = inimigos[i].x + inimigos[i].hitbox_offset_x;
                         float inimigo_hitbox_y_real = inimigos[i].y + inimigos[i].hitbox_offset_y;
 
+
                         // Verifica a colisão e se o jogador NÃO está invencível
                         if (checa_colisao(jogador_hitbox_x_real, jogador_hitbox_y_real, jogador_hitbox_largura, jogador_hitbox_altura,
                             inimigo_hitbox_x_real, inimigo_hitbox_y_real, inimigos[i].hitbox_largura, inimigos[i].hitbox_altura)
                             && !jogador_invencivel)
                         {
+
                             // Aplica o dano e ativa a invencibilidade
                             vida_jogador--;
                             jogador_invencivel = true;
@@ -493,6 +568,7 @@ int main()
                             // KNOCKBACK - O inimigo não desaparece, é jogado para trás
                             inimigos[i].y_velocidade = -5.0f; // Joga o inimigo para cima
                             inimigos[i].no_chao = false;
+
                             // Empurra o inimigo para longe do jogador
                             if (inimigos[i].x < jogador_x) {
                                 inimigos[i].velocidade_x = -5.0f; // Empurra para esquerda
@@ -701,7 +777,6 @@ int main()
                     }
                 }
 
-
                 if (contador_magias_ativas < MAX_MAGIAS_FOGO) {
 
                     for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
@@ -809,6 +884,7 @@ int main()
             case ESCOLHA:
             case FINAL_2:
             case TELA_OBRIGADO:
+            case TELA_GAMEOVER:
                 al_draw_bitmap(background_atual, 0, 0, 0);
                 break;
 
@@ -1005,23 +1081,12 @@ void carregar_fase_3(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_di
     *virado_dir_ptr = true;
     *chao_y_ptr = 750.0f;
 
-    limpar_inimigos(array_inimigos);
+    limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
-    // Golem de Gelo (Patrulheiro)
-    spawn_inimigo(array_inimigos, sprite_golem_gelo,
-        500, (*chao_y_ptr - al_get_bitmap_height(sprite_golem_gelo)), 0, true, // Posição (no chão)
-        -1.0f, 0, 0,             // IA Pulo (ignorado)
-        0, 1536,                 // IA Patrulha (tela inteira)
-        1.0f,                      // Escala (100%)
-        5, 100, 10, 105);          // Hitbox (offset 5,100 | ajuste 10,105)
-
-    // Cyclope de Gelo (Patrulheiro)
-    spawn_inimigo(array_inimigos, sprite_ice_cyclop,
-        1200, (*chao_y_ptr - al_get_bitmap_height(sprite_ice_cyclop)), 0, true, // Posição (no chão)
-        -1.5f, 0, 0,             // IA Pulo (ignorado)
-        0, 1536,                 // IA Patrulha (tela inteira)
-        1.0f,                      // Escala (100%)
-        95, 5, 150, 30);           // Hitbox (offset 95,5 | ajuste 150,30)
+    // --- ZERA OS CONTADORES DE SPAWN DA FASE 3 ---
+    timer_spawn_golem = 0; // Spawna o primeiro Golem imediatamente
+    golems_spawnados = 0;
+    timer_fase_3 = 0;
 }
 
 void descarregar_fase_3() {
@@ -1045,7 +1110,8 @@ void carregar_fase_4(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_di
         0, 0, 0,                 // IA Pulo (sem pulo)
         0, 0,                     // IA Patrulha (sem patrulha)
         1.0f,                      // Escala (100%)
-        40, 50, 140, 155);         // Hitbox (offset 40,50 | ajuste 140,155)
+        40, 50, 140, 155,  // Hitbox (offset 40,50 | ajuste 140,155)
+        15);        
 
     // Titan de Lava (Estático)
     spawn_inimigo(array_inimigos, sprite_titan_lava,
@@ -1053,7 +1119,8 @@ void carregar_fase_4(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_di
         0, 0, 0,                 // IA Pulo (sem pulo)
         0, 0,                     // IA Patrulha (sem patrulha)
         1.0f,                      // Escala (100%)
-        10, 5, 20, 10);            // Hitbox (offset 10,5 | ajuste 20,10)
+        10, 5, 20, 10,  // Hitbox (offset 10,5 | ajuste 20,10)
+        3);            
 }
 
 void descarregar_fase_4() {
@@ -1122,7 +1189,7 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP* sprite,
     float vel_x, float forca_pulo, int freq_pulo,
     float p_inicio, float p_fim,
     float escala,
-    float h_offset_x, float h_offset_y, float h_ajuste_w, float h_ajuste_h)
+    float h_offset_x, float h_offset_y, float h_ajuste_w, float h_ajuste_h, int vida_inicial)
 {
     // Procura o primeiro espaço vazio (inimigo inativo) no array
     for (int i = 0; i < MAX_INIMIGOS; i++) {
@@ -1154,6 +1221,8 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP* sprite,
             array_inimigos[i].hitbox_offset_y = h_offset_y;
             array_inimigos[i].hitbox_largura = array_inimigos[i].largura_desenho - h_ajuste_w;
             array_inimigos[i].hitbox_altura = array_inimigos[i].altura_desenho - h_ajuste_h;
+
+            array_inimigos[i].vida = vida_inicial;
 
             break; // Encontrou um espaço, então sai do loop
         }
