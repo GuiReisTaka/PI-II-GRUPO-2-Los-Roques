@@ -17,7 +17,9 @@ typedef enum {
     FASE_4,
     TRANSICAO_4,
     ESCOLHA,
+    NARRADOR1_F1,
     FINAL_1,
+    NARRADOR2_F1,
 	FINAL_2,
     TELA_OBRIGADO,
     TELA_GAMEOVER
@@ -136,8 +138,10 @@ ALLEGRO_BITMAP* sprite_item_chefe = NULL;
 bool em_dialogo = false;
 int indice_dialogo_atual = 0;
 int total_dialogos = 0;
+bool dialogo_final1_iniciado = false;
 
 #define NUM_DIALOGOS_FASE1 6
+#define NUM_DIALOGOS_FINAL1 12
 
 //Define a altura e a largura da tela
 #define LARGURA_JOGO 1536
@@ -173,8 +177,14 @@ void descarregar_transicao_4();
 void carregar_escolha();
 void descarregar_escolha();
 
-void carregar_final_1();
+void carregar_narrador1_f1();
+void descarregar_narrador1_f1();
+
+void carregar_final_1(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_dir_ptr, float* chao_y_ptr);
 void descarregar_final_1();
+
+void carregar_narrador2_f1();
+void descarregar_narrador2_f1();
 
 void carregar_final_2();
 void descarregar_final_2();
@@ -212,6 +222,7 @@ int main()
     ALLEGRO_EVENT_QUEUE* fila_eventos = NULL;
     ALLEGRO_TIMER* timer = NULL;
     ALLEGRO_BITMAP* mestre_imagem = NULL;
+    ALLEGRO_BITMAP* mestre_doente = NULL;
     ALLEGRO_BITMAP* magia_imagem = NULL;
 
     ALLEGRO_BITMAP* jogador_fase1 = NULL;
@@ -232,6 +243,9 @@ int main()
     ALLEGRO_BITMAP* sprite_item_chefe_f3 = NULL;
 
     ALLEGRO_BITMAP* dialogo_fase1_imgs[NUM_DIALOGOS_FASE1];
+    ALLEGRO_BITMAP* dialogo_final1_imgs[NUM_DIALOGOS_FINAL1];
+    ALLEGRO_BITMAP* texto_p = NULL;
+
 
     Magia magias[MAXIMO_DE_MAGIAS_TOTAL];
 
@@ -257,6 +271,7 @@ int main()
     jogador_fase3 = al_load_bitmap("imagens/p3.png"); 
     jogador_final1 = al_load_bitmap("imagens/p4.png");
     mestre_imagem = al_load_bitmap("imagens/Mestre1.png");
+    mestre_doente = al_load_bitmap("imagens/mestre_doente.png");
     coracao_img = al_load_bitmap("imagens/Coracao-normal.png");
     
     sprite_slime_normal = al_load_bitmap("imagens/slime-normal.png");
@@ -266,10 +281,10 @@ int main()
     sprite_golem_lava = al_load_bitmap("imagens/golem-lava.png");
     sprite_titan_lava = al_load_bitmap("imagens/titan-lava.png");
 
-    sprite_item_minion_f2 = al_load_bitmap("imagens/enxofre.png");
-    sprite_item_chefe_f2 = al_load_bitmap("imagens/ferro.png");
-    sprite_item_minion_f3 = al_load_bitmap("imagens/nitrato-amonia.png");
-    sprite_item_chefe_f3 = al_load_bitmap("imagens/cubo-gelo.png");
+    sprite_item_minion_f3 = al_load_bitmap("imagens/enxofre.png");
+    sprite_item_chefe_f3 = al_load_bitmap("imagens/ferro.png");
+    sprite_item_minion_f2 = al_load_bitmap("imagens/nitrato-amonia.png");
+    sprite_item_chefe_f2 = al_load_bitmap("imagens/cubo-gelo.png");
    
     magia_fogo_img = al_load_bitmap("imagens/Fogo.png");
     magia_gelo_img = al_load_bitmap("imagens/Gelo.png");
@@ -281,11 +296,25 @@ int main()
     dialogo_fase1_imgs[3] = al_load_bitmap("imagens/f1_g1.png");
     dialogo_fase1_imgs[4] = al_load_bitmap("imagens/f1_g2.png");
     dialogo_fase1_imgs[5] = al_load_bitmap("imagens/f1_g3.png");
-    
+
+    dialogo_final1_imgs[0] = al_load_bitmap("imagens/Dialogos_final1/f2_m1.png");
+    dialogo_final1_imgs[1] = al_load_bitmap("imagens/Dialogos_final1/f2_m2.png");
+    dialogo_final1_imgs[2] = al_load_bitmap("imagens/Dialogos_final1/f2_m3.png");
+    dialogo_final1_imgs[3] = al_load_bitmap("imagens/Dialogos_final1/f2_g1.png");
+    dialogo_final1_imgs[4] = al_load_bitmap("imagens/Dialogos_final1/f2_g2.png");
+    dialogo_final1_imgs[5] = al_load_bitmap("imagens/Dialogos_final1/f2_g3.png");
+    dialogo_final1_imgs[6] = al_load_bitmap("imagens/Dialogos_final1/f2_m4.png");
+    dialogo_final1_imgs[7] = al_load_bitmap("imagens/Dialogos_final1/f2_m5.png");
+    dialogo_final1_imgs[8] = al_load_bitmap("imagens/Dialogos_final1/f2_g4.png");
+    dialogo_final1_imgs[9] = al_load_bitmap("imagens/Dialogos_final1/f2_g5.png");
+    dialogo_final1_imgs[10] = al_load_bitmap("imagens/Dialogos_final1/f2_m6.png");
+    dialogo_final1_imgs[11] = al_load_bitmap("imagens/Dialogos_final1/f2_m7.png");
+
+    texto_p = al_load_bitmap("imagens/texto_p.png");
 
     // Verificação de erro para todas as imagens
     if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img || 
-        !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] ||
+        !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] || !dialogo_fase1_imgs[3] || !dialogo_fase1_imgs[4] || !dialogo_fase1_imgs[5] ||!mestre_doente || !texto_p ||
         !sprite_slime_normal || !sprite_slime_bravo || !sprite_golem_gelo || !sprite_ice_cyclop || !sprite_golem_lava || !sprite_titan_lava) {
         printf("Erro ao carregar uma ou mais imagens permanentes!\n");
         return -1;
@@ -317,7 +346,7 @@ int main()
     float botao_voltar_x1 = 618, botao_voltar_y1 = 800, botao_voltar_x2 = 918, botao_voltar_y2 = 880;
 
 	// Botão de avançar nas transições
-    float botao_avancar_x1 = 570, botao_avancar_y1 = 785, botao_avancar_x2 = 967, botao_avancar_y2 = 896; 
+    float botao_avancar_x1 = 570, botao_avancar_y1 = 800, botao_avancar_x2 = 967, botao_avancar_y2 = 940; 
 
 	// Botões da tela de escolha 
     float botao_final1_x1 = 350, botao_final1_y1 = 390, botao_final1_x2 = 1180, botao_final1_y2 = 564;
@@ -331,8 +360,7 @@ int main()
 
     // --- Variáveis do Jogo ---
     float chao_y = 990;
-    float jogador_largura = al_get_bitmap_width(jogador_imagem_atual);
-    float jogador_altura = al_get_bitmap_height(jogador_imagem_atual);
+    
     float jogador_x = 550, jogador_y = 800; 
     float jogador_velocidade_y = 0;
     float velocidade_horizontal = 5.0;
@@ -349,13 +377,16 @@ int main()
     bool jogador_invencivel = false;
     int timer_invencibilidade = 0;
 
-    float jogador_hitbox_offset_x = 10; 
+  
+    // Carrega o menu
+    carregar_menu();
+
+    float jogador_largura = al_get_bitmap_width(jogador_imagem_atual);
+    float jogador_altura = al_get_bitmap_height(jogador_imagem_atual);
+      float jogador_hitbox_offset_x = 10; 
     float jogador_hitbox_offset_y = 5;  
     float jogador_hitbox_largura = jogador_largura - 40; 
     float jogador_hitbox_altura = jogador_altura - 10;
-
-    // Carrega o menu
-    carregar_menu();
 
     al_start_timer(timer);
     bool sair = false;
@@ -375,7 +406,7 @@ int main()
             if (timer_invencibilidade > 0) {
                 timer_invencibilidade--;
                 if (timer_invencibilidade == 0) {
-                    jogador_invencivel = false; 
+                    jogador_invencivel = false;
                 }
             }
 
@@ -411,13 +442,13 @@ int main()
 
                 //Movimentação dos inimigos
                 switch (estado_atual) {
-                case FASE_2: 
+                case FASE_2:
                     timer_fase_2++; // Incrementa o timer principal da fase
 
                     // Spawna o Slime Bravo uma única vez
                     if (timer_fase_2 == TEMPO_SPAWN_CHEFE) {
                         printf("CHEFE SLIME BRAVO SPAWNOU!\n");
-                        
+
                         spawn_inimigo(inimigos, sprite_slime_bravo,
                             1000, 500, 0, false,
                             0, 9.0f, 150,
@@ -428,7 +459,7 @@ int main()
 
                     // Spawna os Slimes Normais 
                     if (slimes_spawnados < TOTAL_SLIMES_FASE_2) {
-                        timer_spawn_slime--; 
+                        timer_spawn_slime--;
                         if (timer_spawn_slime <= 0) {
                             printf("Slime normal #%d spawnou!\n", slimes_spawnados + 1);
 
@@ -555,7 +586,23 @@ int main()
                 case FASE_4:
                     // Futuramente a lógica de movimento dos monstros de Lava
                     break;
+
+                case FINAL_1:
+                    // Verifica se o diálogo já começou. Se não, checa a posição.
+                    if (!dialogo_final1_iniciado) {
+                        // Posição X que ativa o diálogo 
+                        float ponto_x_gatilho = 860;
+
+                        if (jogador_x <= ponto_x_gatilho) {
+                            em_dialogo = true; // Ativa o modo diálogo
+                            dialogo_final1_iniciado = true;
+                        }
+                    }
+                    break;
                 }
+
+            
+        
 
                 //Colisão entre as magias e os inimigos
                 for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
@@ -690,7 +737,7 @@ int main()
                             itens[i].x, itens[i].y, itens[i].largura, itens[i].altura))
                         {
                             // --- AÇÃO DE COLETA ---
-                            itens[i].ativo = false; // Desativa o item (pega ele)
+                            itens[i].ativo = false; // Desativa o item/pega ele
 
                             if (itens[i].tipo_item == 1) {
                                 tem_item_minion_atual = true;
@@ -719,7 +766,7 @@ int main()
                                 descarregar_fase_2();
                                 estado_atual = TRANSICAO_2;
                                 limpar_inimigos(inimigos);
-                                limpar_itens(itens); // Limpa os itens do chão
+                                limpar_itens(itens); 
                                 carregar_transicao_2();
                             }
                             else {
@@ -774,12 +821,41 @@ int main()
 
             // Usa o p para avançar os dialogos
             if (evento.keyboard.keycode == ALLEGRO_KEY_P && em_dialogo) {
-                indice_dialogo_atual++; // Avança para a próxima imagem
+                // Adiciona a checagem para FINAL_1
+                if (estado_atual == FASE_1 || estado_atual == FINAL_1) { // <--- VERIFIQUE AQUI
+                    indice_dialogo_atual++;
+                    if (indice_dialogo_atual >= total_dialogos) {
+                        em_dialogo = false;
+                        indice_dialogo_atual = 0;
+                        if (estado_atual == FINAL_1) {
+                            descarregar_final_1();
+                            estado_atual = NARRADOR2_F1;
+                            carregar_narrador2_f1();
+                        }
 
-                // Se o índice alcançou o total de imagens, o diálogo termina
-                if (indice_dialogo_atual >= total_dialogos) {
-                    em_dialogo = false; // Desativa o modo diálogo
-                    indice_dialogo_atual = 0; // Reseta para o futuro
+                    }
+                }
+            }
+
+            // Usa o p para avancar nas telas de narrador
+            else if (evento.keyboard.keycode == ALLEGRO_KEY_P && !em_dialogo) {
+
+                if (estado_atual == NARRADOR1_F1) {
+                    descarregar_narrador1_f1();
+                    estado_atual = FINAL_1;
+                    jogador_imagem_atual = jogador_final1;
+
+                    carregar_final_1(&jogador_x, &jogador_y, &virado_para_direita, &chao_y);
+
+                    jogador_largura = al_get_bitmap_width(jogador_imagem_atual);
+                    jogador_altura = al_get_bitmap_height(jogador_imagem_atual);
+                    jogador_y = chao_y - jogador_altura;
+                }
+                // --- ADICIONE ESTE NOVO 'ELSE IF' ---
+                else if (estado_atual == NARRADOR2_F1) {
+                    descarregar_narrador2_f1();
+                    estado_atual = TELA_OBRIGADO; 
+                    carregar_tela_obrigado();
                 }
             }
 
@@ -866,13 +942,8 @@ int main()
                 if (mouse_dentro_da_area(mouseX_transformado, mouseY_transformado, botao_final1_x1, botao_final1_y1, botao_final1_x2, botao_final1_y2)) {
                     printf("Botao para o FINAL 1 foi clicado!\n");
                     descarregar_escolha();
-                    estado_atual = FINAL_1;
-                    carregar_final_1();
-                    jogador_imagem_atual = jogador_final1;
-                    jogador_x = 1200;
-                    jogador_y = 500;
-                    chao_y = 940;
-                    virado_para_direita = true;
+                    estado_atual = NARRADOR1_F1; 
+                    carregar_narrador1_f1();
                 }
                 else if (mouse_dentro_da_area(mouseX_transformado, mouseY_transformado, botao_final2_x1, botao_final2_y1, botao_final2_x2, botao_final2_y2)) {
                     printf("Botao para o FINAL 2 foi clicado!\n");
@@ -1034,6 +1105,8 @@ int main()
             case TRANSICAO_3:
             case TRANSICAO_4:
             case ESCOLHA:
+            case NARRADOR1_F1:
+            case NARRADOR2_F1:
             case FINAL_2:
             case TELA_OBRIGADO:
             case TELA_GAMEOVER:
@@ -1061,7 +1134,7 @@ int main()
 
                     // Posição x dos balões de texo do Grigori
                     if (indice_dialogo_atual >= 3) {
-                        img_x = 750; 
+                        img_x = 850; 
                     }
 
                     ALLEGRO_BITMAP* img_dialogo_atual = dialogo_fase1_imgs[indice_dialogo_atual];
@@ -1071,6 +1144,22 @@ int main()
                         img_x, img_y,
                         img_largura, img_altura,
                         0);
+
+                    // Imagem que indica o botão P
+                    float texto_p_largura_original = al_get_bitmap_width(texto_p);
+                    float texto_p_altura_original = al_get_bitmap_height(texto_p);
+
+                    float largura_texto_p = texto_p_largura_original * 0.5f;
+                    float altura_texto_p = texto_p_altura_original * 0.5f;
+
+                    // Posição
+                    float pos_x_texto_p = (LARGURA_JOGO - largura_texto_p) / 2.0f;
+                    float pos_y_texto_p = (ALTURA_JOGO - altura_texto_p) + 50;
+
+                    al_draw_scaled_bitmap(texto_p,
+                        0, 0, texto_p_largura_original, texto_p_altura_original, 
+                        pos_x_texto_p, pos_y_texto_p, largura_texto_p, altura_texto_p, 
+                        0);
                 }
                 // Se o diálogo acabou, desenha a hitbox 
                 else {
@@ -1079,17 +1168,62 @@ int main()
                     al_draw_rectangle(hx_f1, hy_f1, hx_f1 + jogador_hitbox_largura, hy_f1 + jogador_hitbox_altura, al_map_rgba(255, 0, 0, 100), 1);
                 }
                 break;
-
             case FINAL_1:
+                // Desenha o fundo
                 al_draw_bitmap(background_atual, 0, 0, 0);
-                // Lógica de piscar
-                bool desenhar_jogador_f_final = true;
-                if (jogador_invencivel) {
-                    if ((timer_invencibilidade / 4) % 2 == 1) { desenhar_jogador_f_final = false; }
-                }
-                if (desenhar_jogador_f_final) {
-                    int flags_final1 = virado_para_direita ? 0 : ALLEGRO_FLIP_HORIZONTAL;
-                    al_draw_bitmap(jogador_imagem_atual, jogador_x, jogador_y, flags_final1);
+
+                // Desenha o Mestre Doente
+                float largura_original = al_get_bitmap_width(mestre_doente);
+                float altura_original = al_get_bitmap_height(mestre_doente);
+                float nova_largura = largura_original * 6.5;
+                float nova_altura = altura_original * 6.0;
+                float pos_x = 15;
+                float pos_y = chao_y - nova_altura + 150;
+                al_draw_scaled_bitmap(mestre_doente,
+                    0, 0, largura_original, altura_original,
+                    pos_x, pos_y,
+                    nova_largura, nova_altura,
+                    0);
+
+                // Desenha o jogador 
+                int flags_final1 = virado_para_direita ? 0 : ALLEGRO_FLIP_HORIZONTAL;
+                al_draw_bitmap(jogador_imagem_atual, jogador_x, jogador_y, flags_final1);
+
+                // Se estiver em diálogo, desenha o balão de fala
+                if (em_dialogo) {
+                    float img_largura = 500;
+                    float img_altura = 450;
+                    float img_x = 180; 
+                    float img_y = 400;
+
+                    // Lógica para alternar a posição da fala (Mestre vs Grigori)
+                    if ((indice_dialogo_atual >= 3 && indice_dialogo_atual <= 5) ||
+                        (indice_dialogo_atual >= 8 && indice_dialogo_atual <= 9))
+                    {
+                        img_x = 570; // Posição do Grigori (direita)
+                    }
+
+                    // Pega a imagem de diálogo do array do FINAL 1
+                    ALLEGRO_BITMAP* img_dialogo_atual = dialogo_final1_imgs[indice_dialogo_atual];
+
+                    // Desenha o balão
+                    al_draw_scaled_bitmap(img_dialogo_atual,
+                        0, 0, al_get_bitmap_width(img_dialogo_atual), al_get_bitmap_height(img_dialogo_atual),
+                        img_x, img_y,
+                        img_largura, img_altura,
+                        0);
+
+                    // Desenha o aviso "Aperte P"
+                    float texto_p_largura_original = al_get_bitmap_width(texto_p);
+                    float texto_p_altura_original = al_get_bitmap_height(texto_p);
+                    float largura_texto_p = texto_p_largura_original * 0.5f;
+                    float altura_texto_p = texto_p_altura_original * 0.5f;
+                    float pos_x_texto_p = (LARGURA_JOGO - largura_texto_p) / 2.0f;
+                    float pos_y_texto_p = (ALTURA_JOGO - altura_texto_p) + 50;
+                    al_draw_scaled_bitmap(texto_p,
+                        0, 0, texto_p_largura_original, texto_p_altura_original,
+                        pos_x_texto_p, pos_y_texto_p, largura_texto_p, altura_texto_p,
+                        0);
                 }
                 break;
 
@@ -1200,6 +1334,7 @@ int main()
     al_destroy_bitmap(sprite_titan_lava);
 
     al_destroy_bitmap(mestre_imagem);
+    al_destroy_bitmap(mestre_doente);
 
     al_destroy_bitmap(magia_fogo_img);
     al_destroy_bitmap(magia_gelo_img);
@@ -1210,9 +1345,18 @@ int main()
     al_destroy_bitmap(sprite_item_minion_f3);
     al_destroy_bitmap(sprite_item_chefe_f3);
 
+    // Destroi as falas da fase 1
     for (int i = 0; i < NUM_DIALOGOS_FASE1; i++) {
         al_destroy_bitmap(dialogo_fase1_imgs[i]);
     }
+    // Destroi as falas do final 1
+    for (int i = 0; i < NUM_DIALOGOS_FINAL1; i++) {
+        if (dialogo_final1_imgs[i]) {
+            al_destroy_bitmap(dialogo_final1_imgs[i]);
+        }
+    }
+
+    al_destroy_bitmap(texto_p);
 
     al_destroy_timer(timer);
     al_destroy_event_queue(fila_eventos);
@@ -1265,7 +1409,7 @@ void carregar_fase_2(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_di
     limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
     // --- ZERA OS CONTADORES DE SPAWN DA FASE 2 ---
-    timer_spawn_slime = 0; // Define como 0 para spawnar o primeiro slime imediatamente
+    timer_spawn_slime = 0; 
     slimes_spawnados = 0;
     timer_fase_2 = 0;
 
@@ -1366,12 +1510,43 @@ void descarregar_escolha() {
     background_atual = NULL;
 }
 
+void carregar_narrador1_f1() {
+    background_atual = al_load_bitmap("imagens/narrador1_f1.png");
+    if (!background_atual) { printf("Erro ao carregar narrador1_f1!\n"); exit(-1); }
+}
+void descarregar_narrador1_f1() {
+    if (background_atual) al_destroy_bitmap(background_atual);
+    background_atual = NULL;
+}
 
-void carregar_final_1() {
+void carregar_final_1(float* jogador_x_ptr, float* jogador_y_ptr, bool* virado_dir_ptr, float* chao_y_ptr) {
     background_atual = al_load_bitmap("imagens/Tela_final.png");
     if (!background_atual) { printf("Erro ao carregar a tela do Final 1!\n"); exit(-1); }
+
+    *jogador_x_ptr = 1200; 
+    *virado_dir_ptr = false; 
+    *chao_y_ptr = 940.0f; 
+
+    // Resetar itens/inimigos
+    limpar_inimigos(inimigos);
+    limpar_itens(itens);
+
+    // Prepara o diálogo, mas não o inicia
+    em_dialogo = false;
+    indice_dialogo_atual = 0;
+    total_dialogos = NUM_DIALOGOS_FINAL1;
+    dialogo_final1_iniciado = false;
 }
 void descarregar_final_1() {
+    if (background_atual) al_destroy_bitmap(background_atual);
+    background_atual = NULL;
+}
+
+void carregar_narrador2_f1() {
+    background_atual = al_load_bitmap("imagens/narrador2_f1.png");
+    if (!background_atual) { printf("Erro ao carregar narrador2_f1!\n"); exit(-1); }
+}
+void descarregar_narrador2_f1() {
     if (background_atual) al_destroy_bitmap(background_atual);
     background_atual = NULL;
 }
@@ -1409,12 +1584,12 @@ void spawn_item(float x, float chao_y_atual, ALLEGRO_BITMAP* sprite, int tipo_it
             itens[i].tipo_item = tipo_item;
 
             // tamanho dos itens
-            itens[i].largura = 50.0f;  
-            itens[i].altura = 50.0f;   
+            itens[i].largura = 100.0f;  
+            itens[i].altura = 100.0f;   
 
             // Define a posição
             itens[i].x = x;
-            itens[i].y = chao_y_atual - itens[i].altura; // Posição Y (um pouco abaixo de onde o inimigo morreu)
+            itens[i].y = chao_y_atual - itens[i].altura; 
 
             printf("Item %d criado na posicao %.1f, %.1f\n", tipo_item, itens[i].x, itens[i].y);
 
