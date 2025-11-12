@@ -4,7 +4,7 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
 
-// --- Define os estados do jogo ---
+// Define os estados do jogo 
 typedef enum
 {
     MENU,
@@ -47,7 +47,7 @@ typedef struct
     ALLEGRO_BITMAP *sprite;
     float largura;
     float altura;
-    int tipo_item; // 1 = drop de minion, 2 = drop de chefe
+    int tipo_item; 
 } Item;
 
 #define MAX_ITENS 2
@@ -95,17 +95,17 @@ typedef struct
 #define TEMPO_INVENCIBILIDADE (60 * 2)
 
 // Inimigos da fase da floresta
-#define FREQUENCIA_SPAWN_SLIME (60 * 1) // 2 segundos
-#define TEMPO_SPAWN_CHEFE (60 * 20)     // 20 segundos
+#define FREQUENCIA_SPAWN_SLIME (60 * 1) 
+#define TEMPO_SPAWN_CHEFE (60 * 20)     
 #define TOTAL_SLIMES_FASE_2 25
 
-int timer_spawn_slime = 0; // Contador para o próximo slime normal
-int slimes_spawnados = 0;  // Quantos slimes já apareceram
+int timer_spawn_slime = 0; 
+int slimes_spawnados = 0;  
 int timer_fase_2 = 0;
 
 // Inimigos da fase da montanha
-#define FREQUENCIA_SPAWN_GOLEM (60 * 0.8) // 0.8 segundos
-#define TEMPO_SPAWN_CYCLOPE (60 * 13)     // 15 segundos
+#define FREQUENCIA_SPAWN_GOLEM (60 * 0.8) 
+#define TEMPO_SPAWN_CYCLOPE (60 * 13)     
 #define TOTAL_GOLEMS_FASE_3 19
 
 int timer_spawn_golem = 0;
@@ -113,8 +113,8 @@ int golems_spawnados = 0;
 int timer_fase_3 = 0;
 
 // Inimigos da fase do vulcão
-#define FREQUENCIA_SPAWN_GOLEM_LAVA (60 * 1) // 1 segundo
-#define TEMPO_SPAWN_MAXIMO_FASE_4 (60 * 15)  // 15 segundos
+#define FREQUENCIA_SPAWN_GOLEM_LAVA (60 * 0.7) 
+#define TEMPO_SPAWN_MAXIMO_FASE_4 (60 * 15)  
 #define TOTAL_GOLEMS_FASE_4 15
 
 int timer_spawn_golem_lava = 0;
@@ -137,16 +137,28 @@ ALLEGRO_BITMAP *sprite_item_chefe = NULL;
 #define MAX_MAGIAS_FOGO 5
 #define VELOCIDADE_FOGO 12.0f
 
-// Magia de Gelo
+// Magia de Gelo (Fase 3)
 #define MAX_MAGIAS_GELO 5
 #define VELOCIDADE_GELO 8.0f
 
-// Magia de raio
+// Magia de raio (Fase 4)
 #define MAX_MAGIAS_raio 3
 #define VELOCIDADE_raio 15.0f
 
 // Cooldown das magias
-#define COOLDOWN_MAGIA 100
+#define COOLDOWN_MAGIA 15
+
+typedef struct {
+    float x, y;
+    float velocidade_y;
+    bool ativo;
+} BolaDeFogo;
+
+#define MAX_BOLAS_DE_FOGO 10 
+BolaDeFogo bolas_de_fogo[MAX_BOLAS_DE_FOGO];
+
+#define FREQUENCIA_BOLA_FOGO 120 
+int timer_spawn_fogo = 0;
 
 // Variaveis de dialogo
 bool em_dialogo = false;
@@ -161,10 +173,10 @@ bool dialogo_final1_iniciado = false;
 #define LARGURA_JOGO 1536
 #define ALTURA_JOGO 1024
 
-// --- Variável Global para o fundo atual ---
+// Variável Global para o fundo atual 
 ALLEGRO_BITMAP *background_atual = NULL;
 
-// --- Declaração das Funções ---
+// Declaração das Funções 
 void carregar_menu();
 void descarregar_menu();
 void carregar_instrucoes();
@@ -222,7 +234,7 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
 
 bool checa_colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
-// --- Função para checar clique no botão ---
+// Função para checar clique no botão 
 bool mouse_dentro_da_area(float mouse_x, float mouse_y, float x1, float y1, float x2, float y2)
 {
     return (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2);
@@ -230,7 +242,7 @@ bool mouse_dentro_da_area(float mouse_x, float mouse_y, float x1, float y1, floa
 
 int main()
 {
-    // --- Variáveis de representação ---
+    // Variáveis de representação 
     ALLEGRO_DISPLAY *janela = NULL;
     ALLEGRO_EVENT_QUEUE *fila_eventos = NULL;
     ALLEGRO_TIMER *timer = NULL;
@@ -249,6 +261,7 @@ int main()
     ALLEGRO_BITMAP *magia_fogo_img = NULL;
     ALLEGRO_BITMAP *magia_gelo_img = NULL;
     ALLEGRO_BITMAP *magia_raio_img = NULL;
+    ALLEGRO_BITMAP* bola_de_fogo = NULL;
 
     ALLEGRO_BITMAP *sprite_item_minion_f2 = NULL;
     ALLEGRO_BITMAP *sprite_item_chefe_f2 = NULL;
@@ -261,23 +274,23 @@ int main()
 
     Magia magias[MAXIMO_DE_MAGIAS_TOTAL];
 
-    // --- O jogo começa no estado MENU ---
+    // O jogo começa no estado menu
     EstadoJogo estado_atual = MENU;
 
-    // --- Inicialização do Allegro ---
+    // Inicialização do Allegro
     al_init();
     al_init_primitives_addon();
     al_init_image_addon();
     al_install_keyboard();
     al_install_mouse();
 
-    // --- Criação da Janela, Timer e Fila de Eventos ---
+    // Criação da Janela, Timer e Fila de Eventos 
     timer = al_create_timer(1.0 / 60.0);
     al_set_new_display_flags(ALLEGRO_RESIZABLE);
     janela = al_create_display(LARGURA_JOGO, ALTURA_JOGO);
     fila_eventos = al_create_event_queue();
 
-    // --- Carrega imagens permanentes ---
+    // Carrega imagens permanentes 
     jogador_fase1 = al_load_bitmap("imagens/p1.png");
     jogador_fase2 = al_load_bitmap("imagens/p2.png");
     jogador_fase3 = al_load_bitmap("imagens/p3.png");
@@ -301,6 +314,7 @@ int main()
     magia_fogo_img = al_load_bitmap("imagens/Fogo.png");
     magia_gelo_img = al_load_bitmap("imagens/Gelo.png");
     magia_raio_img = al_load_bitmap("imagens/Raio.png");
+    bola_de_fogo = al_load_bitmap("imagens/Meteoro.png");
 
     dialogo_fase1_imgs[0] = al_load_bitmap("imagens/f1_m1.png");
     dialogo_fase1_imgs[1] = al_load_bitmap("imagens/f1_m2.png");
@@ -325,7 +339,7 @@ int main()
     texto_p = al_load_bitmap("imagens/texto_p.png");
 
     // Verificação de erro para todas as imagens
-    if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img ||
+    if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img || !bola_de_fogo ||
         !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] || !dialogo_fase1_imgs[3] || !dialogo_fase1_imgs[4] || !dialogo_fase1_imgs[5] || !mestre_doente || !texto_p ||
         !sprite_slime_normal || !sprite_slime_bravo || !sprite_golem_gelo || !sprite_ice_cyclop || !sprite_golem_lava || !sprite_titan_lava)
     {
@@ -348,7 +362,11 @@ int main()
         inimigos[i].ativo = false;
     }
 
-    // --- Registra fontes de eventos ---
+    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+        bolas_de_fogo[i].ativo = false;
+    }
+
+    // Registra fontes de eventos 
     al_register_event_source(fila_eventos, al_get_display_event_source(janela));
     al_register_event_source(fila_eventos, al_get_keyboard_event_source());
     al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
@@ -485,7 +503,7 @@ int main()
                                       0, 9.0f, 150,
                                       0, 0,
                                       1.5f,
-                                      15, 140, 30, 180, 15);
+                                      15, 140, 30, 180, 15); // 4 Primeiros são a hitbox e o ultimo é a vida
                     }
 
                     // Spawna os Slimes Normais
@@ -504,7 +522,7 @@ int main()
                                           0, 15.0f, 65,
                                           0, 0,
                                           1.0f,
-                                          5, 80, 10, 85, 3);
+                                          5, 80, 10, 85, 3); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             slimes_spawnados++;                         // Incrementa a contagem
                             timer_spawn_slime = FREQUENCIA_SPAWN_SLIME; // Reseta o timer para o próximo
@@ -539,11 +557,11 @@ int main()
                                     inimigos[i].y_velocidade = -inimigos[i].forca_pulo;
                                     if (jogador_x > inimigos[i].x)
                                     {
-                                        inimigos[i].velocidade_x = (inimigos[i].frequencia_pulo == 75) ? 3.0f : 1.5f;
+                                        inimigos[i].velocidade_x = (inimigos[i].frequencia_pulo == 65) ? 3.0f : 3.5f;
                                     }
                                     else
                                     {
-                                        inimigos[i].velocidade_x = (inimigos[i].frequencia_pulo == 75) ? -3.0f : -1.5f;
+                                        inimigos[i].velocidade_x = (inimigos[i].frequencia_pulo == 85) ? -3.0f : -4.5f;
                                     }
                                     inimigos[i].no_chao = false;
                                     inimigos[i].timer_pulo = inimigos[i].frequencia_pulo;
@@ -567,7 +585,7 @@ int main()
                                       -1.5f, 0, 0,
                                       0, 1536,
                                       1.0f,
-                                      95, 5, 150, 30, 16);
+                                      95, 5, 150, 30, 16); // 4 Primeiros são a hitbox e o ultimo é a vida
                     }
 
                     // Spawna os Golems
@@ -585,7 +603,7 @@ int main()
                                           -1.0f, 0, 0,
                                           0, 1536,
                                           1.0f,
-                                          5, 100, 10, 105, 1);
+                                          5, 100, 10, 105, 3); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             golems_spawnados++;
                             timer_spawn_golem = FREQUENCIA_SPAWN_GOLEM; // Reseta o timer
@@ -633,15 +651,15 @@ int main()
                     break;
 
                 case FASE_4:
-                    timer_fase_4++; // Incrementa o timer principal da fase 4
+                    timer_fase_4++; 
 
-                    // Verifica se ainda pode spawnar (dentro dos 15 segundos)
+                    // Verifica se ainda pode spawnar 
                     if (timer_fase_4 >= TEMPO_SPAWN_MAXIMO_FASE_4)
                     {
                         spawn_ativo_fase_4 = false; // Para de spawnar após 15 segundos
                     }
 
-                    // Spawna os Golems de Lava se ainda estiver no período de spawn
+                    // Spawna os Golems de Lava 
                     if (spawn_ativo_fase_4 && golems_lava_spawnados < TOTAL_GOLEMS_FASE_4)
                     {
                         timer_spawn_golem_lava--;
@@ -649,14 +667,14 @@ int main()
                         {
                             printf("Golem de Lava #%d spawnou!\n", golems_lava_spawnados + 1);
 
-                            float spawn_x = 400 + (rand() % 800); // Spawna em área aleatória
+                            float spawn_x = 400 + (rand() % 800); 
 
                             spawn_inimigo(inimigos, sprite_golem_lava,
                                           spawn_x, 100.0f, 0, true,
                                           -1.0f, 0, 0,
                                           0, 1536,
                                           1.0f,
-                                          40, 50, 140, 155, 3);
+                                          75, 60, 140, 155, 3); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             golems_lava_spawnados++;
                             timer_spawn_golem_lava = FREQUENCIA_SPAWN_GOLEM_LAVA; // Reseta o timer
@@ -683,17 +701,43 @@ int main()
                             printf("BOSS FINAL TITAN DE LAVA SPAWNOU!\n");
 
                             spawn_inimigo(inimigos, sprite_titan_lava,
-                                          700, chao_y - al_get_bitmap_height(sprite_titan_lava), 0, true,
+                                          700, (chao_y - al_get_bitmap_height(sprite_titan_lava)) + 200, 0, true,
                                           -1.5f, 0, 0,
                                           0, 1536,
                                           1.0f,
-                                          10, 5, 20, 10, 20); // Boss com mais vida
+                                          10, 5, 20, 170, 15); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             boss_final_spawnado = true;
                         }
                     }
 
-                    // Movimento dos inimigos (igual à fase 3 - patrulha)
+                    // Timer da bola de fogo
+                    timer_spawn_fogo--;
+                    if (timer_spawn_fogo <= 0) {
+                        for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                            if (!bolas_de_fogo[i].ativo) {
+                                bolas_de_fogo[i].ativo = true;
+                                bolas_de_fogo[i].x = rand() % LARGURA_JOGO; // Posição X aleatória
+                                bolas_de_fogo[i].y = 0; 
+                                bolas_de_fogo[i].velocidade_y = 8.5f; // Velocidade da queda 
+                                timer_spawn_fogo = FREQUENCIA_BOLA_FOGO;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Movimento das Bolas de Fogo
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            bolas_de_fogo[i].y += bolas_de_fogo[i].velocidade_y;
+                            // Desativa se sair da tela 
+                            if (bolas_de_fogo[i].y > ALTURA_JOGO) {
+                                bolas_de_fogo[i].ativo = false;
+                            }
+                        }
+                    }
+
+                    // Movimento dos inimigos 
                     for (int i = 0; i < MAX_INIMIGOS; i++)
                     {
                         if (inimigos[i].ativo)
@@ -753,14 +797,14 @@ int main()
                 // Colisão entre as magias e os inimigos
                 for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
                 {
-                    // Se a magia atual estiver ativa
+                    // Se a magia atual estiver ativa percorre todos os inimigos
                     if (magias[i].ativa)
                     {
 
                         // ...percorre todos os inimigos
                         for (int j = 0; j < MAX_INIMIGOS; j++)
                         {
-                            // Se o inimigo atual estiver ativo...
+                            // Se o inimigo atual estiver ativo calcula as coordenadas reais das hitboxes na tela
                             if (inimigos[j].ativo)
                             {
 
@@ -775,7 +819,7 @@ int main()
                                 if (checa_colisao(magia_hitbox_x, magia_hitbox_y, magias[i].largura, magias[i].altura,
                                                   inimigo_hitbox_x, inimigo_hitbox_y, inimigos[j].hitbox_largura, inimigos[j].hitbox_altura))
                                 {
-                                    // --- AÇÃO DE COLISÃO ---
+                                    // --- Colisão ---
                                     magias[i].ativa = false;
                                     inimigos[j].vida--;
                                     inimigos[j].y_velocidade = -2.0f;
@@ -787,7 +831,7 @@ int main()
                                         inimigos[j].ativo = false;
                                         printf("INIMIGO DERROTADO!\n");
 
-                                        // --- LÓGICA DE DROP ---
+                                        // --- Lógica de drop ---
                                         switch (estado_atual)
                                         {
                                         case FASE_2:
@@ -833,8 +877,7 @@ int main()
                                             break;
 
                                         case FASE_4:
-                                            // Na fase 4, não há sistema de itens
-                                            // O objetivo é simplesmente derrotar todos os monstros e o boss
+
                                             if (inimigos[j].sprite == sprite_titan_lava)
                                             {
                                                 printf("BOSS FINAL DERROTADO! Fase 4 completa!\n");
@@ -852,7 +895,7 @@ int main()
                     }
                 }
 
-                // --- Colisão Jogador vs Inimigos ---
+                // Colisão Jogador vs Inimigos 
                 float jogador_hitbox_x_real = jogador_x + jogador_hitbox_offset_x;
                 float jogador_hitbox_y_real = jogador_y + jogador_hitbox_offset_y;
 
@@ -875,7 +918,7 @@ int main()
                             timer_invencibilidade = TEMPO_INVENCIBILIDADE; // Ativa o timer
                             printf("JOGADOR ATINGIDO! Vidas restantes: %d\n", vida_jogador);
 
-                            // KNOCKBACK - O inimigo não desaparece, é jogado para trás
+                            // Knockback - O inimigo não desaparece, é jogado para trás
                             inimigos[i].y_velocidade = -5.0f; // Joga o inimigo para cima
                             inimigos[i].no_chao = false;
 
@@ -901,10 +944,39 @@ int main()
                     }
                 }
 
+                // --- Colisão Jogador vs Bolas de Fogo ---
+                if (estado_atual == FASE_4 && !jogador_invencivel) {
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            // Define a hitbox da bola de fogo 
+                            float bola_largura = al_get_bitmap_width(bola_de_fogo);
+                            float bola_altura = al_get_bitmap_height(bola_de_fogo);
+                                if (checa_colisao(jogador_hitbox_x_real, jogador_hitbox_y_real, jogador_hitbox_largura, jogador_hitbox_altura,
+                                    bolas_de_fogo[i].x, bolas_de_fogo[i].y, bola_largura, bola_altura)){
+                                    // Ação de dano 
+                                    vida_jogador--;
+                                    jogador_invencivel = true;
+                                    timer_invencibilidade = TEMPO_INVENCIBILIDADE;
+                                    printf("JOGADOR ATINGIDO! Vidas restantes: %d\n", vida_jogador);
+
+                                    bolas_de_fogo[i].ativo = false; // Bola desaparece ao atingir
+
+                                    // Checa o Game Over
+                                    if (vida_jogador <= 0) {
+                                        printf("GAME OVER!\n");
+                                        estado_atual = TELA_GAMEOVER;
+                                        carregar_gameover();
+                                        limpar_inimigos(inimigos);
+                                    }
+                                }
+                        }
+                    }
+                }
+
                 // --- Colisão Jogador vs Itens ---
                 for (int i = 0; i < MAX_ITENS; i++)
                 {
-                    // Se o item está ativo no chão...
+                    // Se o item está ativo no chão verifica a colisão entre a hitbox do jogador e a hitbox do item
                     if (itens[i].ativo)
                     {
 
@@ -912,7 +984,7 @@ int main()
                         if (checa_colisao(jogador_hitbox_x_real, jogador_hitbox_y_real, jogador_hitbox_largura, jogador_hitbox_altura,
                                           itens[i].x, itens[i].y, itens[i].largura, itens[i].altura))
                         {
-                            // --- AÇÃO DE COLETA ---
+                            // --- Lógica de coletar os itens ---
                             itens[i].ativo = false; // Desativa o item/pega ele
 
                             if (itens[i].tipo_item == 1)
@@ -995,12 +1067,12 @@ int main()
                             }
                             else
                             {
-                                jogador_x = 1536 - 1; // Impede de sair da tela
+                                jogador_x = 1536 - 1; // Não deixa sair da tela
                             }
                         }
                         else
                         {
-                            jogador_x = 1536 - 1; // Impede de sair enquanto o boss não spawnou
+                            jogador_x = 1536 - 1; // Não deixa sair enquanto o boss não spawnou
                         }
                         break;
                     }
@@ -1043,7 +1115,7 @@ int main()
             {
                 // Adiciona a checagem para FINAL_1
                 if (estado_atual == FASE_1 || estado_atual == FINAL_1)
-                { // <--- VERIFIQUE AQUI
+                { 
                     indice_dialogo_atual++;
                     if (indice_dialogo_atual >= total_dialogos)
                     {
@@ -1075,7 +1147,7 @@ int main()
                     jogador_altura = al_get_bitmap_height(jogador_imagem_atual);
                     jogador_y = chao_y - jogador_altura;
                 }
-                // --- ADICIONE ESTE NOVO 'ELSE IF' ---
+ 
                 else if (estado_atual == NARRADOR2_F1)
                 {
                     descarregar_narrador2_f1();
@@ -1234,126 +1306,111 @@ int main()
                 }
                 break;
 
-                // --- LÓGICA DE MAGIA POR FASE ---
-            case FASE_2:
-            { // Magia de Fogo
-                int contador_magias_ativas = 0;
+                // --- Lógica de magia por fase ---
+            case FASE_2: { // Magia de Fogo
+                if (timer_magia <= 0) { // Verifica o cooldown
+                    int contador_magias_ativas = 0;
 
-                for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                {
-                    if (magias[i].ativa && magias[i].tipo_magia == FASE_2)
-                    {
-                        contador_magias_ativas++;
+                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                        if (magias[i].ativa && magias[i].tipo_magia == FASE_2) {
+                            contador_magias_ativas++;
+                        }
                     }
-                }
 
-                if (contador_magias_ativas < MAX_MAGIAS_FOGO)
-                {
-
-                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                    {
-                        if (!magias[i].ativa)
-                        {
-                            magias[i].ativa = true;
-                            magias[i].tipo_magia = FASE_2;
-                            timer_magia = COOLDOWN_MAGIA;
-                            magias[i].largura = al_get_bitmap_width(magia_fogo_img);
-                            magias[i].altura = al_get_bitmap_height(magia_fogo_img);
-                            magias[i].y = jogador_y + jogador_altura / 2;
-                            if (virado_para_direita)
-                            {
-                                magias[i].x = jogador_x + jogador_largura;
-                                magias[i].velocidade_x = VELOCIDADE_FOGO;
+                    if (contador_magias_ativas < MAX_MAGIAS_FOGO) {
+                        for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                            if (!magias[i].ativa) {
+                                magias[i].ativa = true;
+                                magias[i].tipo_magia = FASE_2;
+                                timer_magia = COOLDOWN_MAGIA; // Reseta o timer
+                                magias[i].largura = al_get_bitmap_width(magia_fogo_img);
+                                magias[i].altura = al_get_bitmap_height(magia_fogo_img);
+                                magias[i].y = jogador_y + jogador_altura / 2;
+                                if (virado_para_direita) {
+                                    magias[i].x = jogador_x + jogador_largura;
+                                    magias[i].velocidade_x = VELOCIDADE_FOGO;
+                                }
+                                else {
+                                    magias[i].x = jogador_x;
+                                    magias[i].velocidade_x = -VELOCIDADE_FOGO;
+                                }
+                                break;
                             }
-                            else
-                            {
-                                magias[i].x = jogador_x;
-                                magias[i].velocidade_x = -VELOCIDADE_FOGO;
-                            }
-                            break;
                         }
                     }
                 }
                 break;
             }
 
-            case FASE_3:
-            { // Magia de Gelo
-                int contador_magias_ativas = 0;
-                for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                {
-                    if (magias[i].ativa && magias[i].tipo_magia == FASE_3)
-                    {
-                        contador_magias_ativas++;
+            case FASE_3: { // Magia de Gelo
+                if (timer_magia <= 0) { // Verifica o cooldown
+                    int contador_magias_ativas = 0;
+                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                        if (magias[i].ativa && magias[i].tipo_magia == FASE_3) {
+                            contador_magias_ativas++;
+                        }
                     }
-                }
 
-                if (contador_magias_ativas < MAX_MAGIAS_GELO)
-                {
-                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                    {
-                        if (!magias[i].ativa)
-                        {
-                            magias[i].ativa = true;
-                            magias[i].tipo_magia = FASE_3;
-                            magias[i].largura = al_get_bitmap_width(magia_gelo_img);
-                            magias[i].altura = al_get_bitmap_height(magia_gelo_img);
-                            magias[i].y = jogador_y + jogador_altura / 2;
-                            if (virado_para_direita)
-                            {
-                                magias[i].x = jogador_x + jogador_largura;
-                                magias[i].velocidade_x = VELOCIDADE_GELO;
+                    if (contador_magias_ativas < MAX_MAGIAS_GELO) {
+                        for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                            if (!magias[i].ativa) {
+                                magias[i].ativa = true;
+                                magias[i].tipo_magia = FASE_3;
+                                timer_magia = COOLDOWN_MAGIA;
+                                magias[i].largura = al_get_bitmap_width(magia_gelo_img);
+                                magias[i].altura = al_get_bitmap_height(magia_gelo_img);
+                                magias[i].y = jogador_y + jogador_altura / 2;
+                                if (virado_para_direita) {
+                                    magias[i].x = jogador_x + jogador_largura;
+                                    magias[i].velocidade_x = VELOCIDADE_GELO;
+                                }
+                                else {
+                                    magias[i].x = jogador_x;
+                                    magias[i].velocidade_x = -VELOCIDADE_GELO;
+                                }
+                                break;
+
                             }
-                            else
-                            {
-                                magias[i].x = jogador_x;
-                                magias[i].velocidade_x = -VELOCIDADE_GELO;
-                            }
-                            break;
                         }
                     }
                 }
                 break;
             }
 
-            case FASE_4:
-            { // Raio
-                int contador_magias_ativas = 0;
-                for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                {
-                    if (magias[i].ativa && magias[i].tipo_magia == FASE_4)
-                    {
-                        contador_magias_ativas++;
+            case FASE_4: { // Raio
+                if (timer_magia <= 0) { // Verifica o cooldown 
+                    int contador_magias_ativas = 0;
+                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                        if (magias[i].ativa && magias[i].tipo_magia == FASE_4) {
+                            contador_magias_ativas++;
+                        }
                     }
-                }
 
-                if (contador_magias_ativas < MAX_MAGIAS_raio)
-                {
-                    for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
-                    {
-                        if (!magias[i].ativa)
-                        {
-                            magias[i].ativa = true;
-                            magias[i].tipo_magia = FASE_4;
-                            magias[i].largura = al_get_bitmap_width(magia_raio_img);
-                            magias[i].altura = al_get_bitmap_height(magia_raio_img);
-                            magias[i].y = jogador_y + jogador_altura / 2;
-                            if (virado_para_direita)
-                            {
-                                magias[i].x = jogador_x + jogador_largura;
-                                magias[i].velocidade_x = VELOCIDADE_raio;
+                    if (contador_magias_ativas < MAX_MAGIAS_raio) {
+                        for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
+                            if (!magias[i].ativa) {
+                                magias[i].ativa = true;
+                                magias[i].tipo_magia = FASE_4;
+                                timer_magia = COOLDOWN_MAGIA; // Reseta o timer
+                                magias[i].largura = al_get_bitmap_width(magia_raio_img);
+                                magias[i].altura = al_get_bitmap_height(magia_raio_img);
+                                magias[i].y = jogador_y + jogador_altura / 2;
+                                if (virado_para_direita) {
+
+                                    magias[i].x = jogador_x + jogador_largura;
+                                    magias[i].velocidade_x = VELOCIDADE_raio;
+                                }
+                                else {
+                                    magias[i].x = jogador_x;
+                                    magias[i].velocidade_x = -VELOCIDADE_raio; 
+                                }
+                                break;
                             }
-                            else
-                            {
-                                magias[i].x = jogador_x;
-                                magias[i].velocidade_x = -VELOCIDADE_raio;
-                            }
-                            break;
                         }
                     }
                 }
                 break;
-            }
+                }
             }
         }
 
@@ -1365,10 +1422,10 @@ int main()
             // Limpa a tela inteira com preto.
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            // --- LÓGICA DE DESENHO ---
+            // Lógica de desenho 
             switch (estado_atual)
             {
-                // --- TELAS ESTÁTICAS  ---
+            // Telas Estaticas 
             case MENU:
             case INSTRUCOES:
             case TRANSICAO_1:
@@ -1435,12 +1492,7 @@ int main()
                                           0);
                 }
                 // Se o diálogo acabou, desenha a hitbox
-                else
-                {
-                    float hx_f1 = jogador_x + jogador_hitbox_offset_x;
-                    float hy_f1 = jogador_y + jogador_hitbox_offset_y;
-                    al_draw_rectangle(hx_f1, hy_f1, hx_f1 + jogador_hitbox_largura, hy_f1 + jogador_hitbox_altura, al_map_rgba(255, 0, 0, 100), 1);
-                }
+               
                 break;
             case FINAL_1:
                 // Desenha o fundo
@@ -1502,14 +1554,32 @@ int main()
                 }
                 break;
 
-                // --- FASES COMPLETAS DE JOGABILIDADE ---
+                // Desenha as fases de jogabilidade
             case FASE_2:
             case FASE_3:
             case FASE_4:
                 // Desenha o fundo da fase
                 al_draw_bitmap(background_atual, 0, 0, 0);
 
-                // Desenha todos os ITENS ativos (primeiro, para ficarem "atrás")
+                if (estado_atual == FASE_4) {
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            float largura_original = al_get_bitmap_width(bola_de_fogo);
+                            float altura_original = al_get_bitmap_height(bola_de_fogo);
+
+                            float nova_largura_bola = largura_original * 2.0f;
+                            float nova_altura_bola = altura_original * 2.0f;
+
+                            al_draw_scaled_bitmap(bola_de_fogo,
+                                0, 0, largura_original, altura_original, 
+                                bolas_de_fogo[i].x, bolas_de_fogo[i].y, 
+                                nova_largura_bola, nova_altura_bola, 
+                                0);
+                        }
+                    }
+                }
+
+                // Desenha todos os ITENS ativos 
                 for (int i = 0; i < MAX_ITENS; i++)
                 {
                     if (itens[i].ativo)
@@ -1590,7 +1660,7 @@ int main()
                     }
                 }
 
-                // Desenha a UI (corações) por último
+                // Desenha os corações 
                 float coracao_largura_nova = 80;
                 float coracao_altura_nova = 80;
                 float coracao_largura_original = al_get_bitmap_width(coracao_img);
@@ -1609,7 +1679,7 @@ int main()
             al_flip_display();
         }
     }
-    // --- Finalização ---
+    // Finalização
     if (background_atual)
         al_destroy_bitmap(background_atual);
 
@@ -1633,6 +1703,7 @@ int main()
     al_destroy_bitmap(magia_fogo_img);
     al_destroy_bitmap(magia_gelo_img);
     al_destroy_bitmap(magia_raio_img);
+    al_destroy_bitmap(bola_de_fogo);
 
     al_destroy_bitmap(sprite_item_minion_f2);
     al_destroy_bitmap(sprite_item_chefe_f2);
@@ -1662,7 +1733,7 @@ int main()
     return 0;
 }
 
-// --- Implementação das Funções de Fase ---
+// Implementação das Funções de Fase 
 
 void carregar_menu()
 {
@@ -1735,7 +1806,7 @@ void carregar_fase_2(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 2 ---
+    // Zera os contadores de spawn
     timer_spawn_slime = 0;
     slimes_spawnados = 0;
     timer_fase_2 = 0;
@@ -1770,12 +1841,12 @@ void carregar_fase_3(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 3 ---
-    timer_spawn_golem = 0; // Spawna o primeiro Golem imediatamente
+    // Zera os contadores de spawn
+    timer_spawn_golem = 0; // Spawna o Golem de gelo
     golems_spawnados = 0;
     timer_fase_3 = 0;
 
-    minions_para_derrotar = TOTAL_GOLEMS_FASE_3; // Define o objetivo
+    minions_para_derrotar = TOTAL_GOLEMS_FASE_3; 
     minions_derrotados_atual = 0;
     chefe_derrotado_atual = false;
     tem_item_minion_atual = false;
@@ -1804,12 +1875,12 @@ void carregar_fase_4(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos);
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 4 ---
-    timer_spawn_golem_lava = 0; // Spawna o primeiro Golem de Lava imediatamente
+    // Zera os contadores de spawn
+    timer_spawn_golem_lava = 0; // Spawna o primeiro Golem de Lava 
     golems_lava_spawnados = 0;
     timer_fase_4 = 0;
-    spawn_ativo_fase_4 = true;   // Permite spawn nos primeiros 15 segundos
-    boss_final_spawnado = false; // O boss ainda não foi spawnado
+    spawn_ativo_fase_4 = true;   
+    boss_final_spawnado = false; 
 
     // NÃO spawna nenhum inimigo inicial - eles vão aparecer dinamicamente
 }
@@ -1894,7 +1965,7 @@ void carregar_final_1(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_d
     *virado_dir_ptr = false;
     *chao_y_ptr = 940.0f;
 
-    // Resetar itens/inimigos
+    // Resetar itens e inimigos
     limpar_inimigos(inimigos);
     limpar_itens(itens);
 
@@ -2020,7 +2091,7 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
             array_inimigos[i].largura_desenho = al_get_bitmap_width(sprite) * escala;
             array_inimigos[i].altura_desenho = al_get_bitmap_height(sprite) * escala;
 
-            // Posição e Física (usa os valores exatos que você passou)
+            // Posição e Física 
             array_inimigos[i].x = x;
             array_inimigos[i].y = y;
             array_inimigos[i].y_velocidade = y_velocidade;
@@ -2028,14 +2099,14 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
             array_inimigos[i].velocidade_x = vel_x;
             array_inimigos[i].virado_para_direita = (vel_x > 0);
 
-            // Comportamento de IA (pulo ou patrulha)
+            // Comportamento de IA 
             array_inimigos[i].forca_pulo = forca_pulo;
             array_inimigos[i].frequencia_pulo = freq_pulo;
             array_inimigos[i].timer_pulo = freq_pulo;
             array_inimigos[i].patrol_x_inicio = p_inicio;
             array_inimigos[i].patrol_x_fim = p_fim;
 
-            // Hitbox (usa os seus valores personalizados)
+            // Hitbox 
             array_inimigos[i].hitbox_offset_x = h_offset_x;
             array_inimigos[i].hitbox_offset_y = h_offset_y;
             array_inimigos[i].hitbox_largura = array_inimigos[i].largura_desenho - h_ajuste_w;
