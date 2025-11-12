@@ -148,6 +148,18 @@ ALLEGRO_BITMAP *sprite_item_chefe = NULL;
 // Cooldown das magias
 #define COOLDOWN_MAGIA 15
 
+typedef struct {
+    float x, y;
+    float velocidade_y;
+    bool ativo;
+} BolaDeFogo;
+
+#define MAX_BOLAS_DE_FOGO 10 
+BolaDeFogo bolas_de_fogo[MAX_BOLAS_DE_FOGO];
+
+#define FREQUENCIA_BOLA_FOGO 120 // A cada 2 segundos (60 * 2)
+int timer_spawn_fogo = 0;
+
 // Variaveis de dialogo
 bool em_dialogo = false;
 int indice_dialogo_atual = 0;
@@ -249,6 +261,7 @@ int main()
     ALLEGRO_BITMAP *magia_fogo_img = NULL;
     ALLEGRO_BITMAP *magia_gelo_img = NULL;
     ALLEGRO_BITMAP *magia_raio_img = NULL;
+    ALLEGRO_BITMAP* bola_de_fogo = NULL;
 
     ALLEGRO_BITMAP *sprite_item_minion_f2 = NULL;
     ALLEGRO_BITMAP *sprite_item_chefe_f2 = NULL;
@@ -301,6 +314,7 @@ int main()
     magia_fogo_img = al_load_bitmap("imagens/Fogo.png");
     magia_gelo_img = al_load_bitmap("imagens/Gelo.png");
     magia_raio_img = al_load_bitmap("imagens/Raio.png");
+    bola_de_fogo = al_load_bitmap("imagens/Meteoro.png");
 
     dialogo_fase1_imgs[0] = al_load_bitmap("imagens/f1_m1.png");
     dialogo_fase1_imgs[1] = al_load_bitmap("imagens/f1_m2.png");
@@ -325,7 +339,7 @@ int main()
     texto_p = al_load_bitmap("imagens/texto_p.png");
 
     // Verificação de erro para todas as imagens
-    if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img ||
+    if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img || !bola_de_fogo ||
         !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] || !dialogo_fase1_imgs[3] || !dialogo_fase1_imgs[4] || !dialogo_fase1_imgs[5] || !mestre_doente || !texto_p ||
         !sprite_slime_normal || !sprite_slime_bravo || !sprite_golem_gelo || !sprite_ice_cyclop || !sprite_golem_lava || !sprite_titan_lava)
     {
@@ -346,6 +360,10 @@ int main()
     for (int i = 0; i < MAX_INIMIGOS; i++)
     {
         inimigos[i].ativo = false;
+    }
+
+    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+        bolas_de_fogo[i].ativo = false;
     }
 
     // --- Registra fontes de eventos ---
@@ -692,6 +710,32 @@ int main()
                         }
                     }
 
+                    // Timer da bola de fogo
+                    timer_spawn_fogo--;
+                    if (timer_spawn_fogo <= 0) {
+                        for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                            if (!bolas_de_fogo[i].ativo) {
+                                bolas_de_fogo[i].ativo = true;
+                                bolas_de_fogo[i].x = rand() % LARGURA_JOGO; // Posição X aleatória
+                                bolas_de_fogo[i].y = 0; // Começa no topo
+                                bolas_de_fogo[i].velocidade_y = 7.0f; // Velocidade da queda (ajuste se quiser)
+                                timer_spawn_fogo = FREQUENCIA_BOLA_FOGO;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Movimento das Bolas de Fogo
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            bolas_de_fogo[i].y += bolas_de_fogo[i].velocidade_y;
+                            // Desativa se sair da tela 
+                            if (bolas_de_fogo[i].y > ALTURA_JOGO) {
+                                bolas_de_fogo[i].ativo = false;
+                            }
+                        }
+                    }
+
                     // Movimento dos inimigos 
                     for (int i = 0; i < MAX_INIMIGOS; i++)
                     {
@@ -896,6 +940,35 @@ int main()
                                 carregar_gameover();
                                 limpar_inimigos(inimigos);
                             }
+                        }
+                    }
+                }
+
+                // --- Colisão Jogador vs Bolas de Fogo ---
+                if (estado_atual == FASE_4 && !jogador_invencivel) {
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            // Define a hitbox da bola de fogo 
+                            float bola_largura = al_get_bitmap_width(bola_de_fogo);
+                            float bola_altura = al_get_bitmap_height(bola_de_fogo);
+                                if (checa_colisao(jogador_hitbox_x_real, jogador_hitbox_y_real, jogador_hitbox_largura, jogador_hitbox_altura,
+                                    bolas_de_fogo[i].x, bolas_de_fogo[i].y, bola_largura, bola_altura)){
+                                    // Ação de dano 
+                                    vida_jogador--;
+                                    jogador_invencivel = true;
+                                    timer_invencibilidade = TEMPO_INVENCIBILIDADE;
+                                    printf("JOGADOR ATINGIDO! Vidas restantes: %d\n", vida_jogador);
+
+                                    bolas_de_fogo[i].ativo = false; // Bola desaparece ao atingir
+
+                                    // Checa o Game Over
+                                    if (vida_jogador <= 0) {
+                                        printf("GAME OVER!\n");
+                                        estado_atual = TELA_GAMEOVER;
+                                        carregar_gameover();
+                                        limpar_inimigos(inimigos);
+                                    }
+                                }
                         }
                     }
                 }
@@ -1488,7 +1561,25 @@ int main()
                 // Desenha o fundo da fase
                 al_draw_bitmap(background_atual, 0, 0, 0);
 
-                // Desenha todos os ITENS ativos (primeiro, para ficarem "atrás")
+                if (estado_atual == FASE_4) {
+                    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+                        if (bolas_de_fogo[i].ativo) {
+                            float largura_original = al_get_bitmap_width(bola_de_fogo);
+                            float altura_original = al_get_bitmap_height(bola_de_fogo);
+
+                            float nova_largura_bola = largura_original * 2.0f;
+                            float nova_altura_bola = altura_original * 2.0f;
+
+                            al_draw_scaled_bitmap(bola_de_fogo,
+                                0, 0, largura_original, altura_original, 
+                                bolas_de_fogo[i].x, bolas_de_fogo[i].y, 
+                                nova_largura_bola, nova_altura_bola, 
+                                0);
+                        }
+                    }
+                }
+
+                // Desenha todos os ITENS ativos 
                 for (int i = 0; i < MAX_ITENS; i++)
                 {
                     if (itens[i].ativo)
@@ -1561,7 +1652,7 @@ int main()
                     }
                 }
 
-                // Desenha a UI (corações) por último
+                // Desenha os corações 
                 float coracao_largura_nova = 80;
                 float coracao_altura_nova = 80;
                 float coracao_largura_original = al_get_bitmap_width(coracao_img);
@@ -1604,6 +1695,7 @@ int main()
     al_destroy_bitmap(magia_fogo_img);
     al_destroy_bitmap(magia_gelo_img);
     al_destroy_bitmap(magia_raio_img);
+    al_destroy_bitmap(bola_de_fogo);
 
     al_destroy_bitmap(sprite_item_minion_f2);
     al_destroy_bitmap(sprite_item_chefe_f2);
