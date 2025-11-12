@@ -1,0 +1,13 @@
+# Arquivos e pastas gerados pelo Visual Studio
+.vs/
+*.suo
+*.user
+
+# Arquivos de compilação
+[Bb]in/
+[Dd]ebug/
+[Rr]elease/
+x64/
+
+# Dependências (se aplicável)
+packages/
