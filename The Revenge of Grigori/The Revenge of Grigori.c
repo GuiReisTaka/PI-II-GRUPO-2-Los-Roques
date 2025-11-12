@@ -4,7 +4,7 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
 
-// --- Define os estados do jogo ---
+// Define os estados do jogo 
 typedef enum
 {
     MENU,
@@ -47,7 +47,7 @@ typedef struct
     ALLEGRO_BITMAP *sprite;
     float largura;
     float altura;
-    int tipo_item; // 1 = drop de minion, 2 = drop de chefe
+    int tipo_item; 
 } Item;
 
 #define MAX_ITENS 2
@@ -137,11 +137,11 @@ ALLEGRO_BITMAP *sprite_item_chefe = NULL;
 #define MAX_MAGIAS_FOGO 5
 #define VELOCIDADE_FOGO 12.0f
 
-// Magia de Gelo
+// Magia de Gelo (Fase 3)
 #define MAX_MAGIAS_GELO 5
 #define VELOCIDADE_GELO 8.0f
 
-// Magia de raio
+// Magia de raio (Fase 4)
 #define MAX_MAGIAS_raio 3
 #define VELOCIDADE_raio 15.0f
 
@@ -157,7 +157,7 @@ typedef struct {
 #define MAX_BOLAS_DE_FOGO 10 
 BolaDeFogo bolas_de_fogo[MAX_BOLAS_DE_FOGO];
 
-#define FREQUENCIA_BOLA_FOGO 120 // A cada 2 segundos (60 * 2)
+#define FREQUENCIA_BOLA_FOGO 120 
 int timer_spawn_fogo = 0;
 
 // Variaveis de dialogo
@@ -173,10 +173,10 @@ bool dialogo_final1_iniciado = false;
 #define LARGURA_JOGO 1536
 #define ALTURA_JOGO 1024
 
-// --- Variável Global para o fundo atual ---
+// Variável Global para o fundo atual 
 ALLEGRO_BITMAP *background_atual = NULL;
 
-// --- Declaração das Funções ---
+// Declaração das Funções 
 void carregar_menu();
 void descarregar_menu();
 void carregar_instrucoes();
@@ -234,7 +234,7 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
 
 bool checa_colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
-// --- Função para checar clique no botão ---
+// Função para checar clique no botão 
 bool mouse_dentro_da_area(float mouse_x, float mouse_y, float x1, float y1, float x2, float y2)
 {
     return (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2);
@@ -242,7 +242,7 @@ bool mouse_dentro_da_area(float mouse_x, float mouse_y, float x1, float y1, floa
 
 int main()
 {
-    // --- Variáveis de representação ---
+    // Variáveis de representação 
     ALLEGRO_DISPLAY *janela = NULL;
     ALLEGRO_EVENT_QUEUE *fila_eventos = NULL;
     ALLEGRO_TIMER *timer = NULL;
@@ -274,23 +274,23 @@ int main()
 
     Magia magias[MAXIMO_DE_MAGIAS_TOTAL];
 
-    // --- O jogo começa no estado MENU ---
+    // O jogo começa no estado menu
     EstadoJogo estado_atual = MENU;
 
-    // --- Inicialização do Allegro ---
+    // Inicialização do Allegro
     al_init();
     al_init_primitives_addon();
     al_init_image_addon();
     al_install_keyboard();
     al_install_mouse();
 
-    // --- Criação da Janela, Timer e Fila de Eventos ---
+    // Criação da Janela, Timer e Fila de Eventos 
     timer = al_create_timer(1.0 / 60.0);
     al_set_new_display_flags(ALLEGRO_RESIZABLE);
     janela = al_create_display(LARGURA_JOGO, ALTURA_JOGO);
     fila_eventos = al_create_event_queue();
 
-    // --- Carrega imagens permanentes ---
+    // Carrega imagens permanentes 
     jogador_fase1 = al_load_bitmap("imagens/p1.png");
     jogador_fase2 = al_load_bitmap("imagens/p2.png");
     jogador_fase3 = al_load_bitmap("imagens/p3.png");
@@ -366,7 +366,7 @@ int main()
         bolas_de_fogo[i].ativo = false;
     }
 
-    // --- Registra fontes de eventos ---
+    // Registra fontes de eventos 
     al_register_event_source(fila_eventos, al_get_display_event_source(janela));
     al_register_event_source(fila_eventos, al_get_keyboard_event_source());
     al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
@@ -700,11 +700,11 @@ int main()
                             printf("BOSS FINAL TITAN DE LAVA SPAWNOU!\n");
 
                             spawn_inimigo(inimigos, sprite_titan_lava,
-                                          700, chao_y - al_get_bitmap_height(sprite_titan_lava), 0, true,
+                                          700, (chao_y - al_get_bitmap_height(sprite_titan_lava)) + 200, 0, true,
                                           -1.5f, 0, 0,
                                           0, 1536,
                                           1.0f,
-                                          10, 5, 20, 170, 160); // 4 Primeiros são a hitbox e o ultimo é a vida
+                                          10, 5, 20, 170, 15); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             boss_final_spawnado = true;
                         }
@@ -717,8 +717,8 @@ int main()
                             if (!bolas_de_fogo[i].ativo) {
                                 bolas_de_fogo[i].ativo = true;
                                 bolas_de_fogo[i].x = rand() % LARGURA_JOGO; // Posição X aleatória
-                                bolas_de_fogo[i].y = 0; // Começa no topo
-                                bolas_de_fogo[i].velocidade_y = 7.0f; // Velocidade da queda (ajuste se quiser)
+                                bolas_de_fogo[i].y = 0; 
+                                bolas_de_fogo[i].velocidade_y = 8.5f; // Velocidade da queda 
                                 timer_spawn_fogo = FREQUENCIA_BOLA_FOGO;
                                 break;
                             }
@@ -796,18 +796,15 @@ int main()
                 // Colisão entre as magias e os inimigos
                 for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++)
                 {
-                    // Se a magia atual estiver ativa
+                    // Se a magia atual estiver ativa percorre todos os inimigos
                     if (magias[i].ativa)
                     {
 
-                        // ...percorre todos os inimigos
                         for (int j = 0; j < MAX_INIMIGOS; j++)
                         {
-                            // Se o inimigo atual estiver ativo...
+                            // Se o inimigo atual estiver ativo calcula as coordenadas reais das hitboxes na tela
                             if (inimigos[j].ativo)
                             {
-
-                                // Calcula as coordenadas reais das hitboxes na tela
                                 float magia_hitbox_x = magias[i].x;
                                 float magia_hitbox_y = magias[i].y;
 
@@ -818,7 +815,7 @@ int main()
                                 if (checa_colisao(magia_hitbox_x, magia_hitbox_y, magias[i].largura, magias[i].altura,
                                                   inimigo_hitbox_x, inimigo_hitbox_y, inimigos[j].hitbox_largura, inimigos[j].hitbox_altura))
                                 {
-                                    // --- AÇÃO DE COLISÃO ---
+                                    // --- Colisão ---
                                     magias[i].ativa = false;
                                     inimigos[j].vida--;
                                     inimigos[j].y_velocidade = -2.0f;
@@ -830,7 +827,7 @@ int main()
                                         inimigos[j].ativo = false;
                                         printf("INIMIGO DERROTADO!\n");
 
-                                        // --- LÓGICA DE DROP ---
+                                        // --- Lógica de drop ---
                                         switch (estado_atual)
                                         {
                                         case FASE_2:
@@ -876,8 +873,7 @@ int main()
                                             break;
 
                                         case FASE_4:
-                                            // Na fase 4, não há sistema de itens
-                                            // O objetivo é simplesmente derrotar todos os monstros e o boss
+
                                             if (inimigos[j].sprite == sprite_titan_lava)
                                             {
                                                 printf("BOSS FINAL DERROTADO! Fase 4 completa!\n");
@@ -895,7 +891,7 @@ int main()
                     }
                 }
 
-                // --- Colisão Jogador vs Inimigos ---
+                // Colisão Jogador vs Inimigos 
                 float jogador_hitbox_x_real = jogador_x + jogador_hitbox_offset_x;
                 float jogador_hitbox_y_real = jogador_y + jogador_hitbox_offset_y;
 
@@ -918,7 +914,7 @@ int main()
                             timer_invencibilidade = TEMPO_INVENCIBILIDADE; // Ativa o timer
                             printf("JOGADOR ATINGIDO! Vidas restantes: %d\n", vida_jogador);
 
-                            // KNOCKBACK - O inimigo não desaparece, é jogado para trás
+                            // Knockback - O inimigo não desaparece, é jogado para trás
                             inimigos[i].y_velocidade = -5.0f; // Joga o inimigo para cima
                             inimigos[i].no_chao = false;
 
@@ -976,15 +972,13 @@ int main()
                 // --- Colisão Jogador vs Itens ---
                 for (int i = 0; i < MAX_ITENS; i++)
                 {
-                    // Se o item está ativo no chão...
+                    // Se o item está ativo no chão verifica a colisão entre a hitbox do jogador e a hitbox do item
                     if (itens[i].ativo)
                     {
-
-                        // Verifica a colisão entre a hitbox do jogador e a hitbox do item
                         if (checa_colisao(jogador_hitbox_x_real, jogador_hitbox_y_real, jogador_hitbox_largura, jogador_hitbox_altura,
                                           itens[i].x, itens[i].y, itens[i].largura, itens[i].altura))
                         {
-                            // --- AÇÃO DE COLETA ---
+                            // --- Lógica de coletar os itens ---
                             itens[i].ativo = false; // Desativa o item/pega ele
 
                             if (itens[i].tipo_item == 1)
@@ -1067,12 +1061,12 @@ int main()
                             }
                             else
                             {
-                                jogador_x = 1536 - 1; // Impede de sair da tela
+                                jogador_x = 1536 - 1; // Não deixa sair da tela
                             }
                         }
                         else
                         {
-                            jogador_x = 1536 - 1; // Impede de sair enquanto o boss não spawnou
+                            jogador_x = 1536 - 1; // Não deixa sair enquanto o boss não spawnou
                         }
                         break;
                     }
@@ -1115,7 +1109,7 @@ int main()
             {
                 // Adiciona a checagem para FINAL_1
                 if (estado_atual == FASE_1 || estado_atual == FINAL_1)
-                { // <--- VERIFIQUE AQUI
+                { 
                     indice_dialogo_atual++;
                     if (indice_dialogo_atual >= total_dialogos)
                     {
@@ -1147,7 +1141,7 @@ int main()
                     jogador_altura = al_get_bitmap_height(jogador_imagem_atual);
                     jogador_y = chao_y - jogador_altura;
                 }
-                // --- ADICIONE ESTE NOVO 'ELSE IF' ---
+ 
                 else if (estado_atual == NARRADOR2_F1)
                 {
                     descarregar_narrador2_f1();
@@ -1306,9 +1300,9 @@ int main()
                 }
                 break;
 
-                // --- LÓGICA DE MAGIA POR FASE ---
+                // --- Lógica de magia por fase ---
             case FASE_2: { // Magia de Fogo
-                if (timer_magia <= 0) { // Verifica o cooldown PRIMEIRO
+                if (timer_magia <= 0) { // Verifica o cooldown
                     int contador_magias_ativas = 0;
 
                     for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
@@ -1343,7 +1337,7 @@ int main()
             }
 
             case FASE_3: { // Magia de Gelo
-                if (timer_magia <= 0) { // Verifica o cooldown PRIMEIRO
+                if (timer_magia <= 0) { // Verifica o cooldown
                     int contador_magias_ativas = 0;
                     for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
                         if (magias[i].ativa && magias[i].tipo_magia == FASE_3) {
@@ -1378,7 +1372,7 @@ int main()
             }
 
             case FASE_4: { // Raio
-                if (timer_magia <= 0) { // Verifica o cooldown PRIMEIRO
+                if (timer_magia <= 0) { // Verifica o cooldown 
                     int contador_magias_ativas = 0;
                     for (int i = 0; i < MAXIMO_DE_MAGIAS_TOTAL; i++) {
                         if (magias[i].ativa && magias[i].tipo_magia == FASE_4) {
@@ -1422,10 +1416,10 @@ int main()
             // Limpa a tela inteira com preto.
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            // --- LÓGICA DE DESENHO ---
+            // Lógica de desenho 
             switch (estado_atual)
             {
-                // --- TELAS ESTÁTICAS  ---
+            // Telas Estaticas 
             case MENU:
             case INSTRUCOES:
             case TRANSICAO_1:
@@ -1554,7 +1548,7 @@ int main()
                 }
                 break;
 
-                // --- FASES COMPLETAS DE JOGABILIDADE ---
+                // Desenha as fases de jogabilidade
             case FASE_2:
             case FASE_3:
             case FASE_4:
@@ -1671,7 +1665,7 @@ int main()
             al_flip_display();
         }
     }
-    // --- Finalização ---
+    // Finalização
     if (background_atual)
         al_destroy_bitmap(background_atual);
 
@@ -1725,7 +1719,7 @@ int main()
     return 0;
 }
 
-// --- Implementação das Funções de Fase ---
+// Implementação das Funções de Fase 
 
 void carregar_menu()
 {
@@ -1798,7 +1792,7 @@ void carregar_fase_2(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 2 ---
+    // Zera os contadores de spawn
     timer_spawn_slime = 0;
     slimes_spawnados = 0;
     timer_fase_2 = 0;
@@ -1833,12 +1827,12 @@ void carregar_fase_3(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos); // Limpa os inimigos da fase anterior
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 3 ---
-    timer_spawn_golem = 0; // Spawna o primeiro Golem imediatamente
+    // Zera os contadores de spawn
+    timer_spawn_golem = 0; // Spawna o Golem de gelo
     golems_spawnados = 0;
     timer_fase_3 = 0;
 
-    minions_para_derrotar = TOTAL_GOLEMS_FASE_3; // Define o objetivo
+    minions_para_derrotar = TOTAL_GOLEMS_FASE_3; 
     minions_derrotados_atual = 0;
     chefe_derrotado_atual = false;
     tem_item_minion_atual = false;
@@ -1867,14 +1861,13 @@ void carregar_fase_4(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
 
     limpar_inimigos(array_inimigos);
 
-    // --- ZERA OS CONTADORES DE SPAWN DA FASE 4 ---
-    timer_spawn_golem_lava = 0; // Spawna o primeiro Golem de Lava imediatamente
+    // Zera os contadores de spawn
+    timer_spawn_golem_lava = 0; // Spawna o primeiro Golem de Lava 
     golems_lava_spawnados = 0;
     timer_fase_4 = 0;
-    spawn_ativo_fase_4 = true;   // Permite spawn nos primeiros 15 segundos
-    boss_final_spawnado = false; // O boss ainda não foi spawnado
+    spawn_ativo_fase_4 = true;   
+    boss_final_spawnado = false; 
 
-    // NÃO spawna nenhum inimigo inicial - eles vão aparecer dinamicamente
 }
 
 void descarregar_fase_4()
@@ -1957,7 +1950,7 @@ void carregar_final_1(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_d
     *virado_dir_ptr = false;
     *chao_y_ptr = 940.0f;
 
-    // Resetar itens/inimigos
+    // Resetar itens e inimigos
     limpar_inimigos(inimigos);
     limpar_itens(itens);
 
@@ -2083,7 +2076,7 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
             array_inimigos[i].largura_desenho = al_get_bitmap_width(sprite) * escala;
             array_inimigos[i].altura_desenho = al_get_bitmap_height(sprite) * escala;
 
-            // Posição e Física (usa os valores exatos que você passou)
+            // Posição e Física 
             array_inimigos[i].x = x;
             array_inimigos[i].y = y;
             array_inimigos[i].y_velocidade = y_velocidade;
@@ -2091,14 +2084,14 @@ void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
             array_inimigos[i].velocidade_x = vel_x;
             array_inimigos[i].virado_para_direita = (vel_x > 0);
 
-            // Comportamento de IA (pulo ou patrulha)
+            // Comportamento de IA 
             array_inimigos[i].forca_pulo = forca_pulo;
             array_inimigos[i].frequencia_pulo = freq_pulo;
             array_inimigos[i].timer_pulo = freq_pulo;
             array_inimigos[i].patrol_x_inicio = p_inicio;
             array_inimigos[i].patrol_x_fim = p_fim;
 
-            // Hitbox (usa os seus valores personalizados)
+            // Hitbox 
             array_inimigos[i].hitbox_offset_x = h_offset_x;
             array_inimigos[i].hitbox_offset_y = h_offset_y;
             array_inimigos[i].hitbox_largura = array_inimigos[i].largura_desenho - h_ajuste_w;
@@ -2130,21 +2123,18 @@ void descarregar_gameover()
 bool checa_colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2)
 {
     // Verifica se dois retângulos (hitboxes) estão se sobrepondo.
-
     // Retorna 'falso' se o retângulo 1 está totalmente à direita do retângulo 2,
     // ou se o retângulo 1 está totalmente à esquerda do retângulo 2.
     if (x1 > x2 + w2 || x1 + w1 < x2)
     {
         return false;
     }
-
     // Retorna 'falso' se o retângulo 1 está totalmente abaixo do retângulo 2,
     // ou se o retângulo 1 está totalmente acima do retângulo 2.
     if (y1 > y2 + h2 || y1 + h1 < y2)
     {
         return false;
     }
-
     // Se nenhuma das condições acima for verdadeira, então eles devem estar colidindo.
     return true;
 }
