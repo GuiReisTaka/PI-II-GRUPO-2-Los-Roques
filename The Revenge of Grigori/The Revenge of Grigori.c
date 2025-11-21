@@ -146,7 +146,7 @@ ALLEGRO_BITMAP *sprite_item_chefe = NULL;
 #define VELOCIDADE_raio 15.0f
 
 // Cooldown das magias
-#define COOLDOWN_MAGIA 15
+#define COOLDOWN_MAGIA 11.8f
 
 typedef struct {
     float x, y;
@@ -157,7 +157,7 @@ typedef struct {
 #define MAX_BOLAS_DE_FOGO 10 
 BolaDeFogo bolas_de_fogo[MAX_BOLAS_DE_FOGO];
 
-#define FREQUENCIA_BOLA_FOGO 120 
+#define FREQUENCIA_BOLA_FOGO 50 
 int timer_spawn_fogo = 0;
 
 // Variaveis de dialogo
@@ -271,6 +271,7 @@ int main()
     ALLEGRO_BITMAP *dialogo_fase1_imgs[NUM_DIALOGOS_FASE1];
     ALLEGRO_BITMAP *dialogo_final1_imgs[NUM_DIALOGOS_FINAL1];
     ALLEGRO_BITMAP *texto_p = NULL;
+    ALLEGRO_BITMAP* avance = NULL;
 
     Magia magias[MAXIMO_DE_MAGIAS_TOTAL];
 
@@ -337,10 +338,11 @@ int main()
     dialogo_final1_imgs[11] = al_load_bitmap("imagens/Dialogos_final1/f2_m7.png");
 
     texto_p = al_load_bitmap("imagens/texto_p.png");
+    avance = al_load_bitmap("imagens/avance.png");
 
     // Verificação de erro para todas as imagens
     if (!jogador_fase1 || !jogador_fase2 || !jogador_fase3 || !mestre_imagem || !magia_fogo_img || !magia_gelo_img || !magia_raio_img || !coracao_img || !bola_de_fogo ||
-        !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] || !dialogo_fase1_imgs[3] || !dialogo_fase1_imgs[4] || !dialogo_fase1_imgs[5] || !mestre_doente || !texto_p ||
+        !dialogo_fase1_imgs[0] || !dialogo_fase1_imgs[1] || !dialogo_fase1_imgs[2] || !dialogo_fase1_imgs[3] || !dialogo_fase1_imgs[4] || !dialogo_fase1_imgs[5] || !mestre_doente || !texto_p || !avance ||
         !sprite_slime_normal || !sprite_slime_bravo || !sprite_golem_gelo || !sprite_ice_cyclop || !sprite_golem_lava || !sprite_titan_lava)
     {
         printf("Erro ao carregar uma ou mais imagens permanentes!\n");
@@ -397,7 +399,7 @@ int main()
     float jogador_velocidade_y = 0;
     float velocidade_horizontal = 5.0;
     float gravidade = 0.5;
-    float forca_pulo = 10.0;
+    float forca_pulo = 15.0;
     bool no_chao = false;
     bool tecla_a = false, tecla_d = false;
     bool virado_para_direita = false;
@@ -705,7 +707,7 @@ int main()
                                           -1.5f, 0, 0,
                                           0, 1536,
                                           1.0f,
-                                          10, 5, 20, 170, 15); // 4 Primeiros são a hitbox e o ultimo é a vida
+                                          10, 5, 20, 170, 28); // 4 Primeiros são a hitbox e o ultimo é a vida
 
                             boss_final_spawnado = true;
                         }
@@ -1490,10 +1492,18 @@ int main()
                                           0, 0, texto_p_largura_original, texto_p_altura_original,
                                           pos_x_texto_p, pos_y_texto_p, largura_texto_p, altura_texto_p,
                                           0);
+
                 }
-                // Se o diálogo acabou, desenha a hitbox
-               
+                else {
+                    al_draw_scaled_bitmap(avance,
+                        0, 0, al_get_bitmap_width(avance), al_get_bitmap_height(avance),
+                        300, 80, // Posição X, Y
+                        900, 600,  // Largura e altura 
+                        0);
+                }
+
                 break;
+
             case FINAL_1:
                 // Desenha o fundo
                 al_draw_bitmap(background_atual, 0, 0, 0);
@@ -1590,7 +1600,8 @@ int main()
                                               itens[i].largura, itens[i].altura, // Usa o tamanho definido no spawn
                                               0);
 
-                        al_draw_rectangle(itens[i].x, itens[i].y, itens[i].x + itens[i].largura, itens[i].y + itens[i].altura, al_map_rgba(255, 255, 0, 100), 1);
+                        //Hitbox
+                        //al_draw_rectangle(itens[i].x, itens[i].y, itens[i].x + itens[i].largura, itens[i].y + itens[i].altura, al_map_rgba(255, 255, 0, 100), 1);
                     }
                 }
 
@@ -1608,7 +1619,8 @@ int main()
 
                         float hitbox_x = inimigos[i].x + inimigos[i].hitbox_offset_x;
                         float hitbox_y = inimigos[i].y + inimigos[i].hitbox_offset_y;
-                        al_draw_rectangle(hitbox_x, hitbox_y, hitbox_x + inimigos[i].hitbox_largura, hitbox_y + inimigos[i].hitbox_altura, al_map_rgba(255, 0, 0, 100), 1);
+                        //Hitbox
+                        //al_draw_rectangle(hitbox_x, hitbox_y, hitbox_x + inimigos[i].hitbox_largura, hitbox_y + inimigos[i].hitbox_altura, al_map_rgba(255, 0, 0, 100), 1);
                     }
                 }
 
@@ -1628,9 +1640,10 @@ int main()
 
                     float hitbox_real_x = jogador_x + jogador_hitbox_offset_x;
                     float hitbox_real_y = jogador_y + jogador_hitbox_offset_y;
-                    al_draw_rectangle(hitbox_real_x, hitbox_real_y,
+                    //Hitbox
+                    /*al_draw_rectangle(hitbox_real_x, hitbox_real_y,
                                       hitbox_real_x + jogador_hitbox_largura, hitbox_real_y + jogador_hitbox_altura,
-                                      al_map_rgba(255, 0, 0, 100), 1);
+                                      al_map_rgba(255, 0, 0, 100), 1);*/
                 }
 
                 // Desenha todas as MAGIAS ativas
@@ -1655,7 +1668,9 @@ int main()
                         {
                             int magia_flags = (magias[i].velocidade_x > 0) ? 0 : ALLEGRO_FLIP_HORIZONTAL;
                             al_draw_bitmap(sprite_magia_atual, magias[i].x, magias[i].y, magia_flags);
-                            al_draw_rectangle(magias[i].x, magias[i].y, magias[i].x + magias[i].largura, magias[i].y + magias[i].altura, al_map_rgba(0, 255, 0, 100), 1);
+
+                            //Hitbox
+                            //al_draw_rectangle(magias[i].x, magias[i].y, magias[i].x + magias[i].largura, magias[i].y + magias[i].altura, al_map_rgba(0, 255, 0, 100), 1);
                         }
                     }
                 }
@@ -1672,6 +1687,40 @@ int main()
                                           0, 0, coracao_largura_original, coracao_altura_original,
                                           20 + (coracao_largura_nova + espacamento) * i, 20,
                                           coracao_largura_nova, coracao_altura_nova, 0);
+                }
+
+                bool mostrar_avance = false;
+
+                // Condições da fase 2 e 3 para a imagem ""avançar" aparecer
+                if (estado_atual == FASE_2 || estado_atual == FASE_3) {
+                    if (tem_item_minion_atual && tem_item_chefe_atual) {
+                        mostrar_avance = true;
+                    }
+                }
+                // Condições da fase 4 para a imagem "avançar" aparecer
+                else if (estado_atual == FASE_4) {
+                    if (boss_final_spawnado) {
+                        bool boss_vivo = false;
+                        for (int i = 0; i < MAX_INIMIGOS; i++) {
+                            // Verifica se o Titan ainda está ativo no array
+                            if (inimigos[i].ativo && inimigos[i].sprite == sprite_titan_lava) {
+                                boss_vivo = true;
+                                break;
+                            }
+                        }
+                        // Se o boss spawnou e não está vivo, mostra o aviso
+                        if (!boss_vivo) {
+                            mostrar_avance = true;
+                        }
+                    }
+                }
+
+                if (mostrar_avance) {
+                    al_draw_scaled_bitmap(avance,
+                        0, 0, al_get_bitmap_width(avance), al_get_bitmap_height(avance),
+                        300, 80, // Posição X, Y
+                        900, 600,  // Largura e altura 
+                        0);
                 }
                 break;
             }
