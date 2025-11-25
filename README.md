@@ -18,5 +18,6 @@ Controles do Jogo:
     S – Mover para baixo
     D – Mover para a direita
   Ações:
+    Tecla esc - Fecha o jogo
     Tecla p - Avança os dialogos
     Botão esquerdo do mouse - lança magia
