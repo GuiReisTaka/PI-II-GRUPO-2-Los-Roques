@@ -224,6 +224,8 @@ void limpar_inimigos(Inimigo array_inimigos[]);
 void spawn_item(float x, float chao_y_atual, ALLEGRO_BITMAP *sprite, int tipo_item);
 void limpar_itens(Item array_itens[]);
 
+void limpar_bolas_de_fogo();
+
 void spawn_inimigo(Inimigo array_inimigos[], ALLEGRO_BITMAP *sprite,
                    float x, float y, float y_velocidade, bool no_chao,
                    float vel_x, float forca_pulo, int freq_pulo,
@@ -1190,6 +1192,11 @@ int main()
             switch (estado_atual)
             {
             case MENU:
+
+                vida_jogador = 3; // Reseta a vida 
+                jogador_invencivel = false; 
+                timer_invencibilidade = 0;
+
                 if (mouse_dentro_da_area(mouseX_transformado, mouseY_transformado, botao_iniciar_x1, botao_iniciar_y1, botao_iniciar_x2, botao_iniciar_y2))
                 {
                     descarregar_menu();
@@ -1922,6 +1929,9 @@ void carregar_fase_4(float *jogador_x_ptr, float *jogador_y_ptr, bool *virado_di
     *virado_dir_ptr = true;
     *chao_y_ptr = 820.0f;
 
+    limpar_bolas_de_fogo(); // Remove bolas de fogo que tenham ficado
+    timer_spawn_fogo = 0;   // Reseta o timer
+
     limpar_inimigos(array_inimigos);
 
     // Zera os contadores de spawn
@@ -2118,6 +2128,12 @@ void limpar_itens(Item array_itens[])
     for (int i = 0; i < MAX_ITENS; i++)
     {
         array_itens[i].ativo = false;
+    }
+}
+
+void limpar_bolas_de_fogo() {
+    for (int i = 0; i < MAX_BOLAS_DE_FOGO; i++) {
+        bolas_de_fogo[i].ativo = false;
     }
 }
 
