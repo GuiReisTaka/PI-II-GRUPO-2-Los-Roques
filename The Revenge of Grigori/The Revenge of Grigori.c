@@ -113,7 +113,7 @@ int golems_spawnados = 0;
 int timer_fase_3 = 0;
 
 // Inimigos da fase do vulcão
-#define FREQUENCIA_SPAWN_GOLEM_LAVA (60 * 0.7) 
+#define FREQUENCIA_SPAWN_GOLEM_LAVA (60) 
 #define TEMPO_SPAWN_MAXIMO_FASE_4 (60 * 15)  
 #define TOTAL_GOLEMS_FASE_4 15
 
